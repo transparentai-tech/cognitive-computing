@@ -53,7 +53,7 @@ cognitive-computing/
 │
 └── examples/                    # Example scripts
     └── sdm/
-        ├── basic_sdm_demo.py
+        ├── basic_sdm_demo.py DONE
         ├── pattern_recognition.py
         ├── sequence_memory.py
         └── noise_tolerance.py
@@ -75,7 +75,7 @@ cognitive-computing/
 11. **cognitive_computing/sdm/visualizations.py** - Visualization tools DONE
 12. **tests/test_sdm/test_core.py** - Core tests DONE
 13. **docs/sdm/overview.md** - SDM documentation DONE
-14. **examples/sdm/basic_sdm_demo.py** - Basic example
+14. **examples/sdm/basic_sdm_demo.py** - Basic example DONE
 
 ### Phase 2: Holographic Reduced Representations (Future)
 ### Phase 3: Vector Symbolic Architectures (Future)
