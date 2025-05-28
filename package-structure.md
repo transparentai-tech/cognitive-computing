@@ -35,7 +35,7 @@ cognitive-computing/
 │   ├── test_sdm/
 │   │   ├── __init__.py
 │   │   ├── test_core.py DONE
-│   │   ├── test_memory.py
+│   │   ├── test_memory.py DONE
 │   │   ├── test_address_decoder.py
 │   │   └── test_utils.py
 │   └── conftest.py              # Pytest configuration
