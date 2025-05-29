@@ -1,0 +1,42 @@
+# Include documentation
+include README.md
+include LICENSE
+include CONTRIBUTING.md
+include CHANGELOG.md
+
+# Include requirements files
+include requirements.txt
+include requirements-dev.txt
+
+# Include all documentation
+recursive-include docs *.md *.rst *.txt *.png *.jpg *.gif
+
+# Include example scripts
+recursive-include examples *.py *.ipynb
+
+# Include test data and fixtures
+recursive-include tests *.py *.json *.txt *.npy
+
+# Include type stubs if any
+recursive-include cognitive_computing *.pyi
+
+# Include configuration files
+include .coveragerc
+include .gitignore
+include pytest.ini
+include setup.cfg
+include tox.ini
+
+# Exclude compiled Python files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude .DS_Store
+global-exclude .git
+global-exclude .pytest_cache
+global-exclude .tox
+global-exclude .coverage
+global-exclude htmlcov
+global-exclude *.egg-info
+global-exclude build
+global-exclude dist
