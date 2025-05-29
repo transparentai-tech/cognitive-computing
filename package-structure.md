@@ -18,35 +18,38 @@ cognitive-computing/
 │   │   ├── memory.py DONE           # Memory storage and operations
 │   │   ├── address_decoder.py DONE   # Address decoding mechanisms
 │   │   ├── utils.py DONE             # Utility functions
-│   │   └── visualizations.py DONE    # Visualization tools
+│   │   ├── visualizations.py DONE    # Visualization tools
+│   │   └── examples/
+│   │       ├── __init__.py DONE
+│   │       └── basic_usage.py DONE
 │   │
 │   ├── hrr/                     # Holographic Reduced Representations (future)
 │   ├── vsa/                     # Vector Symbolic Architectures (future)
 │   ├── hdc/                     # Hyperdimensional Computing (future)
 │   └── common/                  # Shared utilities
-│       ├── __init__.py
+│       ├── __init__.py DONE
 │       └── base.py DONE              # Base classes
 │
 ├── tests/                       # Test suite
-│   ├── __init__.py
+│   ├── __init__.py DONE
 │   ├── test_sdm/
-│   │   ├── __init__.py
+│   │   ├── __init__.py DONE
 │   │   ├── test_core.py DONE
 │   │   ├── test_memory.py DONE
 │   │   ├── test_address_decoder.py DONE
 │   │   └── test_utils.py DONE
-│   └── conftest.py              # Pytest configuration
+│   └── conftest.py DONE             # Pytest configuration
 │
 ├── docs/                        # Documentation
 │   ├── index.md
-│   ├── installation.md
+│   ├── installation.md DONE
 │   ├── sdm/
 │   │   ├── overview.md DONE
 │   │   ├── theory.md
 │   │   ├── api_reference.md
 │   │   ├── examples.md
 │   │   └── performance.md
-│   └── contributing.md
+│   └── contributing.md DONE
 │
 └── examples/                    # Example scripts
     └── sdm/
