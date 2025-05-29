@@ -107,12 +107,12 @@ This document summarizes the implementation progress of the cognitive-computing 
 - **LICENSE** - License file (MIT suggested) DONE
 - **MANIFEST.in** - Include non-Python files in distribution DONE
 - **docs/index.md** - Documentation home page
-- **docs/installation.md** - Installation guide
+- **docs/installation.md** - Installation guide DONE
 - **docs/sdm/theory.md** - Mathematical theory deep dive
 - **docs/sdm/api_reference.md** - Complete API documentation
 - **docs/sdm/examples.md** - Additional examples and use cases
 - **docs/sdm/performance.md** - Performance optimization guide
-- **docs/contributing.md** - Contribution guidelines
+- **docs/contributing.md** - Contribution guidelines DONE
 
 #### Examples
 - **examples/sdm/pattern_recognition.py** - Pattern recognition demonstration
