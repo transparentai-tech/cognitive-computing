@@ -97,7 +97,7 @@ This document summarizes the implementation progress of the cognitive-computing 
 
 #### Test Files
 - **tests/test_sdm/test_utils.py** - Tests for utility functions DONE
-- **tests/test_sdm/test_visualizations.py** - Tests for visualization functions (optional)
+- **tests/test_sdm/test_visualizations.py** - Tests for visualization functions (optional) DONE
 - **tests/conftest.py** - Pytest configuration and fixtures
 - **tests/__init__.py** - Test package initialization
 - **tests/test_sdm/__init__.py** - SDM test package initialization
