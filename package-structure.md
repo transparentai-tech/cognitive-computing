@@ -18,10 +18,7 @@ cognitive-computing/
 │   │   ├── memory.py DONE           # Memory storage and operations
 │   │   ├── address_decoder.py DONE   # Address decoding mechanisms
 │   │   ├── utils.py DONE             # Utility functions
-│   │   ├── visualizations.py DONE    # Visualization tools
-│   │   └── examples/
-│   │       ├── __init__.py
-│   │       └── basic_usage.py
+│   │   └── visualizations.py DONE    # Visualization tools
 │   │
 │   ├── hrr/                     # Holographic Reduced Representations (future)
 │   ├── vsa/                     # Vector Symbolic Architectures (future)
@@ -36,8 +33,8 @@ cognitive-computing/
 │   │   ├── __init__.py
 │   │   ├── test_core.py DONE
 │   │   ├── test_memory.py DONE
-│   │   ├── test_address_decoder.py
-│   │   └── test_utils.py
+│   │   ├── test_address_decoder.py DONE
+│   │   └── test_utils.py DONE
 │   └── conftest.py              # Pytest configuration
 │
 ├── docs/                        # Documentation
