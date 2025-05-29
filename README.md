@@ -340,7 +340,7 @@ If you use this package in your research, please cite:
 ```bibtex
 @software{cognitive_computing,
   title = {Cognitive Computing: A Python Package for Brain-Inspired Computing},
-  author = {Cognitive Computing Contributors},
+  author = {Ian Hamilton},
   year = {2025},
   url = {https://github.com/transparentai-tech/cognitive-computing}
 }
