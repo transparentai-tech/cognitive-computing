@@ -27,7 +27,7 @@ These technologies enable:
 ### From Source (Recommended during development)
 
 ```bash
-git clone https://github.com/cognitive-computing/cognitive-computing.git
+git clone https://github.com/transparentai-tech/cognitive-computing.git
 cd cognitive-computing
 pip install -e .
 ```
@@ -341,8 +341,8 @@ If you use this package in your research, please cite:
 @software{cognitive_computing,
   title = {Cognitive Computing: A Python Package for Brain-Inspired Computing},
   author = {Cognitive Computing Contributors},
-  year = {2024},
-  url = {https://github.com/cognitive-computing/cognitive-computing}
+  year = {2025},
+  url = {https://github.com/transparentai-tech/cognitive-computing}
 }
 ```
 
