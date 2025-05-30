@@ -1,2 +1,4 @@
 *.pyc
 /cognitive_computing.egg-info
+/.claude
+CLAUDE.md
