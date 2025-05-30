@@ -27,8 +27,8 @@ import networkx as nx
 from typing import Dict, List, Tuple, Optional, Union, Any
 from scipy.spatial.distance import pdist, squareform
 from scipy.cluster.hierarchy import dendrogram, linkage
-from sklearn.decomposition import PCA, TSNE
-from sklearn.manifold import MDS
+from sklearn.decomposition import PCA
+from sklearn.manifold import MDS, TSNE
 import warnings
 import logging
 import pandas as pd
