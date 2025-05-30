@@ -45,18 +45,18 @@ cognitive-computing/
 │   ├── installation.md DONE
 │   ├── sdm/
 │   │   ├── overview.md DONE
-│   │   ├── theory.md
-│   │   ├── api_reference.md
-│   │   ├── examples.md
-│   │   └── performance.md
+│   │   ├── theory.md DONE
+│   │   ├── api_reference.md DONE
+│   │   ├── examples.md DONE
+│   │   └── performance.md DONE
 │   └── contributing.md DONE
 │
 └── examples/                    # Example scripts
     └── sdm/
         ├── basic_sdm_demo.py DONE
-        ├── pattern_recognition.py
-        ├── sequence_memory.py
-        └── noise_tolerance.py
+        ├── pattern_recognition.py DONE
+        ├── sequence_memory.py DONE
+        └── noise_tolerance.py DONE
 ```
 
 ## Implementation Plan
