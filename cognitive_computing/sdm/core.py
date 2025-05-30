@@ -407,9 +407,17 @@ class SDM(CognitiveMemory):
             # Sum counters from activated locations
             sum_counters = np.sum(self.counters[activated_locations], axis=0)
             
-            # Calculate confidence based on counter magnitude
-            max_possible = len(activated_locations) * self.config.saturation_value
-            confidence = np.abs(sum_counters) / max_possible
+            # For confidence, calculate based on the agreement among activated locations
+            # When a single pattern is stored, counters will be -1 or 1
+            # Perfect recall should give high confidence
+            
+            # Simple approach: confidence based on absolute sum normalized by voters
+            # If all locations vote the same way, abs(sum) = num_locations
+            # If votes are split, abs(sum) < num_locations
+            num_activated = len(activated_locations)
+            confidence = np.abs(sum_counters) / num_activated
+            
+            # Since counters can accumulate over multiple stores, cap at 1
             confidence = np.clip(confidence, 0, 1)
             
             # Apply threshold to get binary output
@@ -548,15 +556,28 @@ class SDM(CognitiveMemory):
         avg_error = np.mean([p["avg_error"] for p in sampled_pairs])
         max_error = np.max([p["avg_error"] for p in sampled_pairs])
         
+        # Compute correlation safely
+        overlaps = [p["overlap"] for p in sampled_pairs]
+        errors = [p["avg_error"] for p in sampled_pairs]
+        
+        # Check if correlation can be computed (need variance in both arrays)
+        try:
+            # Need at least 2 different values in each array for correlation
+            if len(set(overlaps)) > 1 and len(set(errors)) > 1:
+                correlation = np.corrcoef(overlaps, errors)[0, 1]
+            else:
+                # Cannot compute correlation if one or both arrays have no variance
+                correlation = np.nan
+        except (FloatingPointError, RuntimeWarning, ValueError):
+            # Handle any other numerical issues
+            correlation = np.nan
+        
         return {
             "num_pairs_analyzed": len(sampled_pairs),
             "avg_location_overlap": avg_overlap,
             "avg_recall_error": avg_error,
             "max_recall_error": max_error,
-            "correlation": np.corrcoef(
-                [p["overlap"] for p in sampled_pairs],
-                [p["avg_error"] for p in sampled_pairs]
-            )[0, 1]
+            "correlation": correlation
         }
     
     def __del__(self):

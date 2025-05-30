@@ -247,7 +247,7 @@ class BinaryVector:
         np.ndarray
             Bipolar vector with values in {-1, +1}
         """
-        return 2 * binary_vector - 1
+        return 2 * binary_vector.astype(np.int8) - 1  # Returns -1/1
     
     @staticmethod
     def from_bipolar(bipolar_vector: np.ndarray) -> np.ndarray:
