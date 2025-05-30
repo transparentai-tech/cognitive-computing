@@ -2,3 +2,5 @@
 /cognitive_computing.egg-info
 /.claude
 CLAUDE.md
+/venv
+SETUP_INSTRUCTIONS.md
