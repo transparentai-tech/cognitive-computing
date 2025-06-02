@@ -29,7 +29,7 @@ import numpy as np
 from cognitive_computing.sdm import create_sdm, SDM, SDMConfig
 from cognitive_computing.sdm.utils import (
     generate_random_patterns, add_noise, PatternEncoder,
-    test_sdm_performance, save_sdm_state, load_sdm_state
+    evaluate_sdm_performance, save_sdm_state, load_sdm_state
 )
 from cognitive_computing.sdm.visualizations import (
     plot_memory_distribution, plot_recall_accuracy,
@@ -212,12 +212,12 @@ for addr, dat in zip(addresses, data):
 
 # Compare performance
 print("Counter-based Storage:")
-counter_results = test_sdm_performance(counter_sdm, test_patterns=50)
+counter_results = evaluate_sdm_performance(counter_sdm, test_patterns=50)
 print(f"  Recall accuracy: {counter_results.recall_accuracy_mean:.2%}")
 print(f"  Noise tolerance (20%): {counter_results.noise_tolerance[0.2]:.2%}")
 
 print("\nBinary Storage:")
-binary_results = test_sdm_performance(binary_sdm, test_patterns=50)
+binary_results = evaluate_sdm_performance(binary_sdm, test_patterns=50)
 print(f"  Recall accuracy: {binary_results.recall_accuracy_mean:.2%}")
 print(f"  Noise tolerance (20%): {binary_results.noise_tolerance[0.2]:.2%}")
 
@@ -1394,7 +1394,7 @@ def find_optimal_configuration(target_capacity, dimension, test_patterns=50):
             print(f"  After {i+1} patterns: {avg_accuracy:.2%} accuracy")
     
     # Final performance test
-    final_results = test_sdm_performance(sdm, test_patterns=min(100, target_capacity))
+    final_results = evaluate_sdm_performance(sdm, test_patterns=min(100, target_capacity))
     
     return {
         'config': config,

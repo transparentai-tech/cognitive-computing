@@ -57,6 +57,7 @@ setup(
         "seaborn>=0.11.0",
         "tqdm>=4.62.0",
         "joblib>=1.1.0",
+        "networkx>=2.6.0",
     ],
     extras_require={
         "dev": [
@@ -73,7 +74,6 @@ setup(
         ],
         "viz": [
             "plotly>=5.0.0",
-            "networkx>=2.6.0",
             "graphviz>=0.19.0",
         ],
         "gpu": [

@@ -618,9 +618,9 @@ Analyze activation patterns in an SDM instance.
 
 ### Performance Testing
 
-#### test_sdm_performance
+#### evaluate_sdm_performance
 ```python
-test_sdm_performance(sdm: SDM, test_patterns: int = 100,
+evaluate_sdm_performance(sdm: SDM, test_patterns: int = 100,
                     noise_levels: List[float] = None,
                     progress: bool = True) -> PerformanceTestResult
 ```
@@ -872,9 +872,9 @@ vector_pattern = encoder.encode_vector(np.array([0.1, 0.5, 0.9]))
 
 ### Performance Testing
 ```python
-from cognitive_computing.sdm.utils import test_sdm_performance
+from cognitive_computing.sdm.utils import evaluate_sdm_performance
 
-results = test_sdm_performance(sdm, test_patterns=100)
+results = evaluate_sdm_performance(sdm, test_patterns=100)
 print(f"Recall accuracy: {results.recall_accuracy_mean:.2%}")
 print(f"Noise tolerance at 20%: {results.noise_tolerance[0.2]:.2%}")
 ```

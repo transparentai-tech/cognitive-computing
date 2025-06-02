@@ -212,10 +212,10 @@ sdm.store(features_encoded, features_encoded)
 SDM operations are highly efficient:
 
 ```python
-from cognitive_computing.sdm.utils import test_sdm_performance
+from cognitive_computing.sdm.utils import evaluate_sdm_performance
 
 # Run performance benchmark
-results = test_sdm_performance(sdm, test_patterns=100)
+results = evaluate_sdm_performance(sdm, test_patterns=100)
 
 print(f"Write time: {results.write_time_mean*1000:.2f} ms")
 print(f"Read time: {results.read_time_mean*1000:.2f} ms")
@@ -249,7 +249,7 @@ from cognitive_computing.sdm.visualizations import (
 fig = plot_memory_distribution(sdm)
 
 # Test and plot recall accuracy
-test_results = test_sdm_performance(sdm)
+test_results = evaluate_sdm_performance(sdm)
 fig = plot_recall_accuracy(test_results)
 
 # Interactive 3D visualization

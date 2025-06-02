@@ -332,10 +332,10 @@ if crosstalk['avg_recall_error'] > 0.1:
 
 ### 3. Performance Monitoring
 ```python
-from cognitive_computing.sdm.utils import test_sdm_performance
+from cognitive_computing.sdm.utils import evaluate_sdm_performance
 
 # Run performance tests
-results = test_sdm_performance(sdm, test_patterns=100)
+results = evaluate_sdm_performance(sdm, test_patterns=100)
 print(f"Average recall accuracy: {results.recall_accuracy_mean:.2%}")
 print(f"Noise tolerance at 20%: {results.noise_tolerance[0.2]:.2%}")
 ```
