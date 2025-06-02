@@ -368,9 +368,9 @@ class PerformanceTestResult:
     capacity_utilization: float
 
 
-def test_sdm_performance(sdm, test_patterns: int = 100,
-                        noise_levels: List[float] = None,
-                        progress: bool = True) -> PerformanceTestResult:
+def evaluate_sdm_performance(sdm, test_patterns: int = 100,
+                            noise_levels: List[float] = None,
+                            progress: bool = True) -> PerformanceTestResult:
     """
     Comprehensive performance test for SDM.
     

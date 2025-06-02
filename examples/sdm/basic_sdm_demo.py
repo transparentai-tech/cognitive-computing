@@ -36,7 +36,7 @@ from cognitive_computing.sdm import SDM, SDMConfig, create_sdm
 from cognitive_computing.sdm.utils import (
     add_noise,
     generate_random_patterns,
-    test_sdm_performance,
+    evaluate_sdm_performance,
     analyze_activation_patterns,
     PatternEncoder,
     compute_memory_capacity
@@ -476,7 +476,7 @@ def performance_benchmark(dimension: int = 1000) -> None:
     
     # Run performance tests
     print("\nRunning performance benchmark...")
-    results = test_sdm_performance(sdm, test_patterns=100, progress=True)
+    results = evaluate_sdm_performance(sdm, test_patterns=100, progress=True)
     
     print(f"\nPerformance Results:")
     print(f"  - Patterns tested: {results.pattern_count}")

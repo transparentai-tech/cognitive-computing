@@ -32,7 +32,7 @@ from cognitive_computing.sdm.visualizations import (
 from cognitive_computing.sdm.core import SDM, SDMConfig
 from cognitive_computing.sdm.utils import (
     generate_random_patterns,
-    test_sdm_performance,
+    evaluate_sdm_performance,
     add_noise
 )
 from cognitive_computing.sdm.address_decoder import (
@@ -236,7 +236,7 @@ class TestPlotRecallAccuracy:
     
     def test_with_performance_test_result(self, test_sdm):
         """Test with actual performance test results."""
-        results = test_sdm_performance(test_sdm, test_patterns=10, progress=False)
+        results = evaluate_sdm_performance(test_sdm, test_patterns=10, progress=False)
         
         test_dict = {
             'noise_tolerance': results.noise_tolerance,
@@ -288,7 +288,8 @@ class TestVisualizeMemoryContents:
         
         assert fig is not None
         assert isinstance(fig, plt.Figure)
-        assert len(fig.axes) == 4  # 2x2 subplot
+        # Check for main subplots (colorbars may add extra axes)
+        assert len(fig.axes) >= 4  # At least 2x2 subplot
     
     def test_static_tsne(self, test_sdm):
         """Test static visualization with t-SNE."""
@@ -539,7 +540,7 @@ class TestVisualizationIntegration:
         assert fig2 is not None
         
         # 3. Test performance and plot
-        results = test_sdm_performance(test_sdm, test_patterns=5, progress=False)
+        results = evaluate_sdm_performance(test_sdm, test_patterns=5, progress=False)
         test_dict = {'noise_tolerance': results.noise_tolerance}
         fig3 = plot_recall_accuracy(test_dict)
         assert fig3 is not None

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from cognitive_computing.sdm import create_sdm, SDM, SDMConfig
 from cognitive_computing.sdm.utils import (
     add_noise, generate_random_patterns, PatternEncoder,
-    test_sdm_performance, calculate_pattern_similarity
+    evaluate_sdm_performance, calculate_pattern_similarity
 )
 from cognitive_computing.sdm.visualizations import plot_recall_accuracy
 

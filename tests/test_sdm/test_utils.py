@@ -25,7 +25,7 @@ from cognitive_computing.sdm.utils import (
     generate_random_patterns,
     compute_memory_capacity,
     analyze_activation_patterns,
-    test_sdm_performance,
+    evaluate_sdm_performance,
     calculate_pattern_similarity,
     create_orthogonal_patterns,
     PatternEncoder,
@@ -354,7 +354,7 @@ class TestPerformanceTesting:
         assert result.recall_accuracy_mean == 0.95
         assert result.noise_tolerance[0.1] == 0.9
     
-    def test_test_sdm_performance(self):
+    def test_evaluate_sdm_performance(self):
         """Test SDM performance testing function."""
         config = SDMConfig(
             dimension=256,
@@ -364,7 +364,7 @@ class TestPerformanceTesting:
         sdm = SDM(config)
         
         # Run quick performance test
-        results = test_sdm_performance(
+        results = evaluate_sdm_performance(
             sdm, 
             test_patterns=10,
             noise_levels=[0.0, 0.1, 0.2],
@@ -764,7 +764,7 @@ class TestUtilsIntegration:
             sdm.store(addr, dat)
         
         # Test performance
-        results = test_sdm_performance(sdm, test_patterns=10, progress=False)
+        results = evaluate_sdm_performance(sdm, test_patterns=10, progress=False)
         assert results.recall_accuracy_mean > 0.8
         
         # Analyze patterns

@@ -75,20 +75,27 @@ def plot_memory_distribution(sdm, figsize: Tuple[int, int] = (15, 10),
     ax1.set_xlabel('Number of Activations')
     ax1.set_ylabel('Number of Locations')
     ax1.set_title('Location Usage Distribution')
-    ax1.axvline(np.mean(usage[usage > 0]), color='red', linestyle='--', 
-                label=f'Mean: {np.mean(usage[usage > 0]):.1f}')
-    ax1.legend()
+    active_usage = usage[usage > 0]
+    if len(active_usage) > 0:
+        mean_usage = np.mean(active_usage)
+        ax1.axvline(mean_usage, color='red', linestyle='--', 
+                    label=f'Mean: {mean_usage:.1f}')
+        ax1.legend()
     
     # 2. Usage heatmap
     ax2 = fig.add_subplot(gs[0, 1])
     # Reshape usage into 2D for visualization
-    grid_size = int(np.sqrt(sdm.config.num_hard_locations))
+    grid_size = int(np.ceil(np.sqrt(sdm.config.num_hard_locations)))
     if grid_size ** 2 == sdm.config.num_hard_locations:
         usage_grid = usage.reshape(grid_size, grid_size)
     else:
         # Pad to make square
         padded_size = grid_size ** 2
-        padded_usage = np.pad(usage, (0, padded_size - len(usage)))
+        pad_length = padded_size - len(usage)
+        if pad_length > 0:
+            padded_usage = np.pad(usage, (0, pad_length))
+        else:
+            padded_usage = usage[:padded_size]
         usage_grid = padded_usage.reshape(grid_size, grid_size)
     
     im = ax2.imshow(usage_grid, cmap='hot', aspect='auto')
@@ -201,8 +208,11 @@ def plot_memory_distribution(sdm, figsize: Tuple[int, int] = (15, 10),
     plt.suptitle(f'SDM Memory Distribution Analysis', fontsize=16, y=0.98)
     
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        logger.info(f"Memory distribution plot saved to {save_path}")
+        try:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            logger.info(f"Memory distribution plot saved to {save_path}")
+        except (IOError, OSError) as e:
+            logger.error(f"Failed to save plot to {save_path}: {e}")
     
     return fig
 
@@ -549,6 +559,11 @@ def visualize_memory_contents(sdm, num_samples: int = 100,
         data = sdm.counters[sample_indices]
     else:
         data = sdm.binary_storage[sample_indices].astype(float)
+    
+    # Check if data has any variance
+    if np.all(data == data[0]):
+        # All locations are identical, add small random noise to enable visualization
+        data = data + np.random.normal(0, 0.01, data.shape)
     
     # Apply dimensionality reduction
     if method == 'pca':
