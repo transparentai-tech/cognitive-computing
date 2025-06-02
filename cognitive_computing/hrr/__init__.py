@@ -33,6 +33,36 @@ from typing import Optional
 # Import core classes
 from .core import HRR, HRRConfig
 
+# Import operations
+from .operations import CircularConvolution, VectorOperations
+
+# Import cleanup memory
+from .cleanup import CleanupMemory, CleanupMemoryConfig
+
+# Import encoders
+from .encoding import RoleFillerEncoder, SequenceEncoder, HierarchicalEncoder
+
+# Import utilities
+from .utils import (
+    generate_random_vector,
+    generate_unitary_vector,
+    generate_orthogonal_set,
+    analyze_binding_capacity,
+    measure_crosstalk,
+    test_associative_capacity,
+    to_complex,
+    from_complex,
+)
+
+# Import visualization functions
+from .visualizations import (
+    plot_similarity_matrix,
+    plot_binding_accuracy,
+    visualize_cleanup_space,
+    plot_convolution_spectrum,
+    animate_unbinding_process,
+)
+
 # Version info
 __version__ = "0.1.0"
 
@@ -45,14 +75,38 @@ __all__ = [
     "HRR",
     "HRRConfig",
     
+    # Operations
+    "CircularConvolution",
+    "VectorOperations",
+    
+    # Cleanup memory
+    "CleanupMemory",
+    "CleanupMemoryConfig",
+    
+    # Encoders
+    "RoleFillerEncoder",
+    "SequenceEncoder",
+    "HierarchicalEncoder",
+    
+    # Utilities
+    "generate_random_vector",
+    "generate_unitary_vector",
+    "generate_orthogonal_set",
+    "analyze_binding_capacity",
+    "measure_crosstalk",
+    "test_associative_capacity",
+    "to_complex",
+    "from_complex",
+    
+    # Visualizations
+    "plot_similarity_matrix",
+    "plot_binding_accuracy",
+    "visualize_cleanup_space",
+    "plot_convolution_spectrum",
+    "animate_unbinding_process",
+    
     # Factory functions
     "create_hrr",
-    
-    # Future imports (to be added as modules are created)
-    # "CircularConvolution",
-    # "CleanupMemory", 
-    # "RoleFillerEncoder",
-    # "SequenceEncoder",
 ]
 
 
