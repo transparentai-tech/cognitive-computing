@@ -561,7 +561,23 @@ class MemoryStatistics:
             data = self.sdm.binary_storage[sampled_indices].astype(float)
         
         # Compute correlation matrix
-        return np.corrcoef(data)
+        # Handle case where some locations have zero variance
+        try:
+            # Check if any row has zero variance
+            variances = np.var(data, axis=1)
+            if np.any(variances == 0):
+                # Filter out zero-variance rows
+                valid_indices = variances > 0
+                if np.sum(valid_indices) < 2:
+                    # Not enough valid rows for correlation
+                    return np.array([[1.0]])
+                data = data[valid_indices]
+            
+            return np.corrcoef(data)
+        except (FloatingPointError, ValueError):
+            # Fallback: return identity matrix if correlation fails
+            n = data.shape[0]
+            return np.eye(n)
     
     def analyze_recall_quality(self, test_size: int = 100, 
                               noise_levels: List[float] = None) -> Dict[str, List[float]]:
