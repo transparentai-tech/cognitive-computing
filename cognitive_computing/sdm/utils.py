@@ -114,7 +114,10 @@ def generate_random_patterns(num_patterns: int, dimension: int,
     sparsity : float, optional
         Proportion of 1s in patterns (default: 0.5)
     correlation : float, optional
-        Correlation between addresses and data (0 to 1)
+        Correlation between addresses and data (0 to 1).
+        Note: The actual bit matching between address and data will be
+        correlation + (1 - correlation) * 0.5. For example, correlation=0.7
+        results in approximately 85% bit matching
     seed : int, optional
         Random seed
         

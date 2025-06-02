@@ -139,7 +139,7 @@ Analyze interference between stored patterns.
 @property
 size() -> int
 ```
-Return the number of stored patterns.
+Return the number of stored patterns. This includes all patterns passed to the `store()` method, even those that failed to activate any locations.
 
 ---
 
@@ -422,9 +422,12 @@ class JaccardDecoder(AddressDecoder)
 Jaccard similarity-based decoder for sparse data.
 
 #### Parameters
-- **config** : `DecoderConfig`
+- **config** : `DecoderConfig` - The `activation_radius` is interpreted as similarity threshold × 1000. For example, `activation_radius=200` means a Jaccard similarity threshold of 0.2
 - **hard_locations** : `np.ndarray`
-- **min_similarity** : `float` = None
+- **min_similarity** : `float` = None - If provided, overrides the threshold calculated from activation_radius
+
+#### Usage Note
+For sparse binary data (e.g., 30% density), typical Jaccard similarities between random patterns are around 0.15-0.25. Therefore, use activation_radius values like 200-300 for reasonable activation rates.
 
 ---
 
@@ -574,6 +577,9 @@ generate_random_patterns(num_patterns: int, dimension: int,
                        seed: Optional[int] = None) -> Tuple[List[np.ndarray], List[np.ndarray]]
 ```
 Generate random binary patterns for testing.
+
+**Parameters:**
+- **correlation** : float - Controls correlation between address and data patterns. With correlation=c, the expected bit matching is: c + (1-c) × 0.5. For example, correlation=0.7 results in ~85% bit matching.
 
 **Returns:**
 - **addresses** : List of address patterns

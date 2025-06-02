@@ -456,7 +456,11 @@ class SDM(CognitiveMemory):
     
     @property
     def size(self) -> int:
-        """Return the number of stored patterns."""
+        """Return the number of stored patterns.
+        
+        This includes all patterns passed to store(), even those that
+        failed to activate any locations.
+        """
         return len(self._stored_addresses)
     
     def get_memory_stats(self) -> Dict[str, float]:
