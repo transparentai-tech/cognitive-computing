@@ -23,6 +23,7 @@ import logging
 from dataclasses import dataclass
 from collections import defaultdict
 import json
+import hashlib
 import pickle
 import warnings
 
@@ -79,10 +80,11 @@ def add_noise(pattern: np.ndarray, noise_level: float,
             
     elif noise_type == 'burst':
         # Burst errors (contiguous flips)
-        burst_length = max(1, int(len(pattern) * noise_level))
-        start_pos = rng.randint(0, max(1, len(pattern) - burst_length))
-        noisy_pattern[start_pos:start_pos + burst_length] = \
-            1 - noisy_pattern[start_pos:start_pos + burst_length]
+        burst_length = int(len(pattern) * noise_level)
+        if burst_length > 0:
+            start_pos = rng.randint(0, max(1, len(pattern) - burst_length))
+            noisy_pattern[start_pos:start_pos + burst_length] = \
+                1 - noisy_pattern[start_pos:start_pos + burst_length]
             
     elif noise_type == 'salt_pepper':
         # Salt and pepper noise (force to 0 or 1)
@@ -736,8 +738,18 @@ def save_sdm_state(sdm, filepath: str, include_patterns: bool = True):
     include_patterns : bool, optional
         Whether to include stored patterns
     """
+    # Save only the constructor parameters of SDMConfig
+    config_params = {
+        'dimension': sdm.config.dimension,
+        'num_hard_locations': sdm.config.num_hard_locations,
+        'activation_radius': sdm.config.activation_radius,
+        'storage_method': sdm.config.storage_method,
+        'saturation_value': sdm.config.saturation_value,
+        'seed': sdm.config.seed
+    }
+    
     state = {
-        'config': sdm.config.__dict__,
+        'config': config_params,
         'hard_locations': sdm.hard_locations,
         'location_usage': sdm.location_usage,
         'metrics': sdm.metrics.__dict__
