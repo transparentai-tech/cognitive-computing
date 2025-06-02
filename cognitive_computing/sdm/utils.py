@@ -273,8 +273,13 @@ def analyze_activation_patterns(sdm, sample_size: int = 1000,
     for i in range(min(100, sample_size)):  # Subsample for efficiency
         for j in range(i + 1, min(100, sample_size)):
             addr_similarity = 1 - hamming(addresses[i], addresses[j])
-            activation_overlap = len(activation_sets[i] & activation_sets[j]) / \
-                               max(len(activation_sets[i]), len(activation_sets[j]))
+            # Handle case where no locations are activated
+            max_size = max(len(activation_sets[i]), len(activation_sets[j]))
+            if max_size > 0:
+                activation_overlap = len(activation_sets[i] & activation_sets[j]) / max_size
+            else:
+                # Both sets are empty, so overlap is undefined (we'll use 1.0)
+                activation_overlap = 1.0
             correlations.append((addr_similarity, activation_overlap))
     
     # Location usage distribution
@@ -479,8 +484,11 @@ def calculate_pattern_similarity(pattern1: np.ndarray, pattern2: np.ndarray,
     
     elif metric == 'jaccard':
         # Jaccard similarity
-        intersection = np.sum(pattern1 & pattern2)
-        union = np.sum(pattern1 | pattern2)
+        # Ensure patterns are binary integers for bitwise operations
+        p1 = pattern1.astype(np.uint8)
+        p2 = pattern2.astype(np.uint8)
+        intersection = np.sum(p1 & p2)
+        union = np.sum(p1 | p2)
         return intersection / union if union > 0 else 0.0
     
     elif metric == 'cosine':

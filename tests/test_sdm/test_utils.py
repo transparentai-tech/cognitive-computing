@@ -178,8 +178,12 @@ class TestGenerateRandomPatterns:
         
         avg_correlation = np.mean(correlations)
         
-        # Should be close to specified correlation
-        assert abs(avg_correlation - correlation) < 0.1
+        # With correlation=0.7, we expect:
+        # - 70% of bits are copied (match perfectly)
+        # - 30% of bits are random (match with ~50% probability due to sparsity=0.5)
+        # Expected: 0.7 * 1.0 + 0.3 * 0.5 = 0.85
+        expected_correlation = correlation + (1 - correlation) * 0.5
+        assert abs(avg_correlation - expected_correlation) < 0.05
     
     def test_reproducibility(self):
         """Test that seed produces reproducible patterns."""
