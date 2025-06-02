@@ -176,7 +176,7 @@ class TestJaccardDecoder:
         config = DecoderConfig(
             dimension=256,
             num_hard_locations=100,
-            activation_radius=700,  # Interpreted as similarity * 1000
+            activation_radius=200,  # Interpreted as similarity * 1000 (0.2 threshold)
             seed=42
         )
         rng = np.random.RandomState(config.seed)
@@ -186,7 +186,7 @@ class TestJaccardDecoder:
     
     def test_initialization(self, jaccard_decoder):
         """Test Jaccard decoder initialization."""
-        assert jaccard_decoder.min_similarity == 0.7  # 700/1000
+        assert jaccard_decoder.min_similarity == 0.2  # 200/1000
         assert hasattr(jaccard_decoder, 'hard_location_ones')
         assert hasattr(jaccard_decoder, 'valid_locations')
     
@@ -667,9 +667,9 @@ class TestDecoderIntegration:
             seed=42
         )
         
-        # For Jaccard, use higher threshold
+        # For Jaccard, use appropriate threshold (similarity * 1000)
         if decoder_type == 'jaccard':
-            decoder_config.activation_radius = 700
+            decoder_config.activation_radius = 200
         
         decoder = create_decoder(decoder_type, decoder_config, sdm.hard_locations)
         
