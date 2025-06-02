@@ -10,8 +10,8 @@ A comprehensive Python package for cognitive computing, implementing various bra
 
 The `cognitive-computing` package provides implementations of several cognitive computing paradigms:
 
-- **Sparse Distributed Memory (SDM)** ✅ - *Currently implemented*
-- **Holographic Reduced Representations (HRR)** 🚧 - *Coming soon*
+- **Sparse Distributed Memory (SDM)** ✅ - *Fully implemented*
+- **Holographic Reduced Representations (HRR)** ✅ - *Core implementation complete*
 - **Vector Symbolic Architectures (VSA)** 🚧 - *Coming soon*
 - **Hyperdimensional Computing (HDC)** 🚧 - *Coming soon*
 
@@ -104,6 +104,42 @@ from cognitive_computing.sdm.address_decoder import create_decoder
 decoder = create_decoder('adaptive', config, sdm.hard_locations)
 ```
 
+### Holographic Reduced Representations (HRR)
+
+```python
+from cognitive_computing.hrr import create_hrr
+from cognitive_computing.hrr.encoding import RoleFillerEncoder
+
+# Create HRR system
+hrr = create_hrr(dimension=1024)
+
+# Basic binding and unbinding
+role = hrr.generate_vector()
+filler = hrr.generate_vector()
+binding = hrr.bind(role, filler)
+retrieved = hrr.unbind(binding, role)
+print(f"Similarity: {hrr.similarity(retrieved, filler):.3f}")
+
+# Encode structured information
+encoder = RoleFillerEncoder(hrr)
+person = encoder.encode_structure({
+    "name": hrr.generate_vector(),  # Vector for "John"
+    "age": hrr.generate_vector(),    # Vector for "25"
+    "city": hrr.generate_vector()    # Vector for "Boston"
+})
+
+# Cleanup memory for robust retrieval
+from cognitive_computing.hrr.cleanup import CleanupMemory, CleanupMemoryConfig
+
+cleanup = CleanupMemory(CleanupMemoryConfig(threshold=0.3), dimension=1024)
+cleanup.add_item("john", hrr.generate_vector())
+cleanup.add_item("mary", hrr.generate_vector())
+
+# Clean up noisy vectors
+noisy_vector = retrieved + np.random.randn(1024) * 0.2
+name, clean_vector, similarity = cleanup.cleanup(noisy_vector)
+```
+
 ## Features
 
 ### Sparse Distributed Memory (SDM)
@@ -137,6 +173,38 @@ decoder = create_decoder('adaptive', config, sdm.hard_locations)
   - Activation patterns
   - Recall accuracy curves
   - Interactive 3D visualizations
+
+### Holographic Reduced Representations (HRR)
+
+- **Core Operations**
+  - Circular convolution binding
+  - Circular correlation unbinding
+  - Vector bundling (superposition)
+  - Real and complex storage modes
+
+- **Encoding Strategies**
+  - Role-filler binding
+  - Sequence encoding (positional/chaining)
+  - Hierarchical structures
+  - Tree encoding
+
+- **Cleanup Memory**
+  - Item storage and retrieval
+  - Similarity-based cleanup
+  - Multiple similarity metrics
+  - Persistence support
+
+- **Analysis Tools**
+  - Binding capacity analysis
+  - Crosstalk measurement
+  - Performance benchmarking
+  - Vector generation utilities
+
+- **Visualization Support**
+  - Similarity matrices
+  - Convolution spectra
+  - Cleanup space visualization
+  - Performance dashboards
 
 ## Examples
 
@@ -312,11 +380,14 @@ mypy cognitive_computing
   - Comprehensive utilities and visualizations
   - Full test coverage
 
+- ✅ Holographic Reduced Representations (HRR) - **Core Complete**
+  - Circular convolution/correlation operations
+  - Role-filler and sequence encoding
+  - Cleanup memory implementation
+  - Comprehensive test suite (12 files)
+  - **Still needed**: Examples and documentation
+
 ### Upcoming Features
-- 🚧 Holographic Reduced Representations (HRR)
-  - Circular convolution operations
-  - Role-filler binding
-  - Compression capabilities
 
 - 🚧 Vector Symbolic Architectures (VSA)
   - Bundling and binding operations
