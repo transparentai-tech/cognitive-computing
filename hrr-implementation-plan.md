@@ -184,7 +184,13 @@ tests/test_hrr/
 - Position-based retrieval
 - Sequence completion
 
-### 4. Analogical Reasoning (`examples/hrr/analogical_reasoning.py`)
+### 4. Hierarchical Processing (`examples/hrr/hierarchical_processing.py`)
+- Tree structure encoding
+- Nested data representation
+- Recursive retrieval
+- Part-whole relationships
+
+### 5. Analogical Reasoning (`examples/hrr/analogical_reasoning.py`)
 - Structure mapping
 - Analogy completion
 - Similarity-based reasoning
@@ -259,8 +265,8 @@ tests/test_hrr/
 4. Performance benchmarks ✅
 
 ### Phase 2.4: Documentation & Examples ❌ NOT STARTED
-1. Complete documentation
-2. Example scripts
+1. Complete documentation (5 files)
+2. Example scripts (5 scripts)
 3. ~~Visualization tools~~ ✅ (COMPLETE)
 4. ~~Integration with SDM~~ (Not needed - using common base)
 
@@ -301,7 +307,7 @@ tests/test_hrr/
 3. **Documentation Requirements** ❌
    - Complete API documentation ❌
    - Mathematical theory explained ❌
-   - 5+ working examples ❌ (0 of 4 planned)
+   - 5+ working examples ❌ (0 of 5 planned)
 
 4. **Integration Requirements** ✅
    - ~~Seamless integration with existing SDM~~ ✅ (Via common base)
@@ -340,7 +346,7 @@ tests/test_hrr/
 - **Integration**: Consistent with SDM patterns via common base classes
 
 ### Still Needed ❌
-- **4 Example Scripts**: Demonstrate HRR capabilities
+- **5 Example Scripts**: Demonstrate HRR capabilities (including hierarchical processing)
 - **5 Documentation Files**: Theory, API reference, tutorials
 - **1 Import Update**: Update hrr/__init__.py to export all modules
 

@@ -283,13 +283,14 @@ results = evaluate_sdm_performance(sdm, test_patterns=100)
 15. **examples/hrr/basic_hrr_demo.py** - Basic demonstration
 16. **examples/hrr/symbol_binding.py** - Symbol binding examples
 17. **examples/hrr/sequence_processing.py** - Sequence examples
-18. **examples/hrr/analogical_reasoning.py** - Analogy examples
-19. **docs/hrr/overview.md** - HRR introduction
-20. **docs/hrr/theory.md** - Mathematical foundations
-21. **docs/hrr/api_reference.md** - API documentation
-22. **docs/hrr/examples.md** - Detailed examples
-23. **docs/hrr/performance.md** - Performance guide
-24. **Update hrr/__init__.py** - Add imports for all modules
+18. **examples/hrr/hierarchical_processing.py** - Hierarchical structure examples
+19. **examples/hrr/analogical_reasoning.py** - Analogy examples
+20. **docs/hrr/overview.md** - HRR introduction
+21. **docs/hrr/theory.md** - Mathematical foundations
+22. **docs/hrr/api_reference.md** - API documentation
+23. **docs/hrr/examples.md** - Detailed examples
+24. **docs/hrr/performance.md** - Performance guide
+25. **Update hrr/__init__.py** - Add imports for all modules
 
 ## Future Phases (Not Started)
 
@@ -355,7 +356,7 @@ results = evaluate_sdm_performance(sdm, test_patterns=100)
    - **Still need**: Examples and documentation
    
 3. **Next Steps for HRR**
-   - Create 4 example scripts demonstrating HRR usage
+   - Create 5 example scripts demonstrating HRR usage (including hierarchical processing)
    - Write 5 documentation files
    - Update hrr/__init__.py to import all modules
    - Then HRR will be fully complete
