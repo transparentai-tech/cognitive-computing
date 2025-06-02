@@ -768,8 +768,22 @@ class HierarchicalDecoder(AddressDecoder):
         float
             Estimated expected activations
         """
-        # Rough estimate based on branching factor and levels
-        return self.config.activation_radius * (self.branching_factor ** 0.5)
+        # Estimate based on the hierarchical structure
+        # At each level, we expect to activate approximately 1/branching_factor of clusters
+        # The final activation count depends on cluster sizes at the bottom level
+        
+        # For a balanced hierarchy, we expect roughly:
+        # num_locations / (branching_factor ^ (num_levels - 1))
+        expected_fraction = 1.0 / (self.branching_factor ** (self.num_levels - 1))
+        
+        # Adjust by activation radius effect (normalized)
+        radius_factor = min(1.0, self.config.activation_radius / self.config.dimension)
+        
+        # Expected activations should be a fraction of total locations
+        expected = self.config.num_hard_locations * expected_fraction * (1 + radius_factor)
+        
+        # Ensure it's at least 1 and at most num_hard_locations
+        return max(1.0, min(expected, self.config.num_hard_locations))
     
     def visualize_hierarchy(self) -> Dict[str, np.ndarray]:
         """
@@ -880,7 +894,7 @@ class LSHDecoder(AddressDecoder):
         for bit in hash_bits:
             hash_value = (hash_value << 1) | bit
         
-        return hash_value
+        return int(hash_value)
     
     def decode(self, address: np.ndarray) -> np.ndarray:
         """
