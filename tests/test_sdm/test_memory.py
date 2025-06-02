@@ -488,17 +488,25 @@ class TestMemoryStatistics:
         assert np.all(corr_matrix <= 1.001)
         assert np.allclose(corr_matrix, corr_matrix.T, atol=1e-10)  # Symmetric
     
-    def test_recall_quality_analysis(self, stats_sdm):
+    def test_recall_quality_analysis(self):
         """Test recall quality analysis."""
-        stats = MemoryStatistics(stats_sdm)
+        # Create SDM with higher capacity for this test
+        config = SDMConfig(
+            dimension=256,
+            num_hard_locations=200,  # Increased from 50
+            activation_radius=115,
+            seed=42
+        )
+        sdm = SDM(config)
+        stats = MemoryStatistics(sdm)
         
-        # Store patterns
-        addresses, data = generate_random_patterns(20, 256)
+        # Store patterns within capacity
+        addresses, data = generate_random_patterns(30, 256)  # Reasonable for capacity ~28
         for addr, dat in zip(addresses, data):
-            stats_sdm.store(addr, dat)
+            sdm.store(addr, dat)
         
         quality = stats.analyze_recall_quality(
-            test_size=10,
+            test_size=20,  # Test on most patterns
             noise_levels=[0.0, 0.1, 0.2]
         )
         
@@ -512,8 +520,8 @@ class TestMemoryStatistics:
         assert len(accuracies) == 3
         assert accuracies[0] >= accuracies[1] >= accuracies[2]
         
-        # Perfect recall at zero noise
-        assert accuracies[0] > 0.9
+        # With patterns within capacity, we should have high accuracy at zero noise
+        assert accuracies[0] > 0.90  # Back to 90% since we're within capacity
     
     def test_recall_quality_empty_memory(self, stats_sdm):
         """Test recall quality analysis with empty memory."""
