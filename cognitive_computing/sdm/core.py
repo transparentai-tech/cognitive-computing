@@ -287,8 +287,17 @@ class SDM(CognitiveMemory):
         # Get activated locations
         activated_locations = self._get_activated_locations(address)
         
+        # Store pattern for analysis (limited to prevent memory issues)
+        # Do this before checking activation to count all store attempts
+        if len(self._stored_addresses) < 1000:
+            self._stored_addresses.append(address.copy())
+            self._stored_data.append(data.copy())
+        
         if len(activated_locations) == 0:
             warnings.warn("No locations activated for the given address")
+            # Record metrics even for failed stores
+            elapsed_time = time.time() - start_time
+            self.metrics.record_store(elapsed_time)
             return
         
         # Store data in activated locations
@@ -315,11 +324,6 @@ class SDM(CognitiveMemory):
         
         # Update usage statistics
         self.location_usage[activated_locations] += 1
-        
-        # Store pattern for analysis (limited to prevent memory issues)
-        if len(self._stored_addresses) < 1000:
-            self._stored_addresses.append(address.copy())
-            self._stored_data.append(data.copy())
         
         # Record metrics
         elapsed_time = time.time() - start_time
