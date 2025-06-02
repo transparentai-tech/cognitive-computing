@@ -495,23 +495,31 @@ class TestSDMStatistics:
     
     def test_activation_statistics(self, analyzed_sdm):
         """Test activation statistics for addresses."""
-        address = np.random.randint(0, 2, 256)
+        # Test with multiple addresses to reduce variance
+        num_samples = 20
+        activation_counts = []
         
-        # Use base decoder method
-        decoder = analyzed_sdm._get_activated_locations
-        activated = decoder(address)
-        
-        assert isinstance(activated, np.ndarray)
-        assert len(activated) > 0
-        assert len(activated) < analyzed_sdm.config.num_hard_locations
+        for _ in range(num_samples):
+            address = np.random.randint(0, 2, 256)
+            
+            # Use base decoder method
+            decoder = analyzed_sdm._get_activated_locations
+            activated = decoder(address)
+            
+            assert isinstance(activated, np.ndarray)
+            assert len(activated) > 0
+            assert len(activated) < analyzed_sdm.config.num_hard_locations
+            
+            activation_counts.append(len(activated))
         
         # Check expected number of activations
         expected = compute_memory_capacity(
             256, 100, 115
         )['expected_activated']
         
-        # Should be reasonably close to expected
-        assert 0.5 * expected < len(activated) < 2 * expected
+        # Check average is close to expected
+        avg_activated = np.mean(activation_counts)
+        assert 0.7 * expected < avg_activated < 1.3 * expected
 
 
 class TestSDMPerformance:
