@@ -961,13 +961,14 @@ def performance_comparison():
         seq_mem = SequenceMemory(dimension=config['dim'])
         
         # Generate and store sequences
-        sequences = generate_random_patterns(
+        patterns, _ = generate_random_patterns(
             config['sequences'] * config['length'], 
             config['dim']
-        )[0]
+        )
+        patterns = np.array(patterns)  # Ensure it's a numpy array
         
         # Reshape into sequences
-        sequences = sequences.reshape(config['sequences'], config['length'], -1)
+        sequences = patterns.reshape(config['sequences'], config['length'], -1)
         
         store_time = 0
         for seq in sequences:

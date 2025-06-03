@@ -146,5 +146,6 @@ def create_sdm(dimension: int, num_locations: int = None,
 
 # Log module import
 import logging
+import numpy as np
 logger = logging.getLogger(__name__)
 logger.info(f"SDM module v{__version__} loaded")

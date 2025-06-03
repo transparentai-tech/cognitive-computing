@@ -222,8 +222,9 @@ class DigitRecognizer(PatternRecognizer):
         print("Training digit recognizer...")
         
         for digit in range(10):
-            # Create label (one-hot encoding)
-            label = np.zeros(10, dtype=np.uint8)
+            # Create label (one-hot encoding extended to match dimension)
+            label = np.zeros(self.dimension, dtype=np.uint8)
+            # Use first 10 positions for one-hot encoding
             label[digit] = 1
             
             # Generate variations
@@ -341,8 +342,9 @@ class ImagePatternRecognizer(PatternRecognizer):
         print("Training image pattern recognizer...")
         
         for class_id in range(self.num_classes):
-            # Create label vector
-            label = np.zeros(self.num_classes, dtype=np.uint8)
+            # Create label vector (extended to match dimension)
+            label = np.zeros(self.dimension, dtype=np.uint8)
+            # Use first num_classes positions for one-hot encoding
             label[class_id] = 1
             
             # Generate training samples
@@ -632,8 +634,9 @@ def demonstrate_custom_patterns():
     
     print("Training custom pattern recognizer...")
     for pattern_type in range(4):
-        # Create label
-        label = np.zeros(4, dtype=np.uint8)
+        # Create label (extended to match dimension)
+        label = np.zeros(recognizer.dimension, dtype=np.uint8)
+        # Use first 4 positions for one-hot encoding
         label[pattern_type] = 1
         
         # Create variations
@@ -741,7 +744,8 @@ def performance_analysis():
                 variations = [add_noise(base, 0.03) for _ in range(20)]
                 variations[0] = base  # Include original
                 
-                label = np.zeros(num_patterns, dtype=np.uint8)
+                label = np.zeros(dim, dtype=np.uint8)
+                # Use first num_patterns positions for one-hot encoding
                 label[i] = 1
                 
                 recognizer.train(i, variations, label)

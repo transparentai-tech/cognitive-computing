@@ -120,8 +120,20 @@ class AnalogicalReasoner:
         d_vec_combined = self.hrr.bundle([d_vec, d_vec_rel])
         
         # Find closest concept
-        name, _, confidence = self.concept_memory.cleanup(d_vec_combined)
-        return name, confidence
+        try:
+            name, _, confidence = self.concept_memory.cleanup(d_vec_combined)
+            return name, confidence
+        except ValueError:
+            # If no item found above threshold, find best match manually
+            best_name = None
+            best_sim = -1.0
+            for concept_name in self.concepts:
+                concept_vec = self.concepts[concept_name]
+                sim = self.hrr.similarity(d_vec_combined, concept_vec)
+                if sim > best_sim:
+                    best_sim = sim
+                    best_name = concept_name
+            return best_name if best_name else "Unknown", best_sim
 
 
 def demonstrate_simple_analogies():

@@ -62,17 +62,40 @@ class HierarchicalProcessor:
         self.node_memory.add_item(name, vector)
         return vector
     
+    def _register_tree_items(self, tree: Dict[str, Any]):
+        """Recursively register all items in a tree."""
+        for key, value in tree.items():
+            # Register the key
+            if isinstance(key, str) and key not in self.hrr.memory:
+                vector = self.add_node(key)
+                self.hrr.add_item(key, vector)
+            
+            # Handle the value
+            if isinstance(value, dict):
+                # Recursively process nested dictionary
+                self._register_tree_items(value)
+            elif isinstance(value, str):
+                # Register string value
+                if value not in self.hrr.memory:
+                    vector = self.add_node(value)
+                    self.hrr.add_item(value, vector)
+    
     def encode_tree(self, tree: Dict[str, Any]) -> np.ndarray:
         """Encode a tree structure."""
+        # Auto-register all items in the tree
+        self._register_tree_items(tree)
         return self.encoder.encode_tree(tree)
     
     def query_path(self, encoding: np.ndarray, path: List[str]) -> Tuple[str, float]:
         """Query a specific path in the hierarchy."""
-        result = self.encoder.decode_subtree(encoding, path)
+        result = self.encoder.decode_path(encoding, path)
         
         # If result is a leaf node, clean it up
-        name, _, confidence = self.node_memory.cleanup(result)
-        return name, confidence
+        try:
+            name, _, confidence = self.node_memory.cleanup(result)
+            return name, confidence
+        except ValueError:
+            return "Unknown", 0.0
     
     def visualize_tree(self, tree: Dict[str, Any], title: str = "Tree Structure"):
         """Visualize a tree structure."""
@@ -150,7 +173,7 @@ def demonstrate_basic_hierarchy():
     print("        └── CFO: Eve")
     print("            └── Accountant: Frank")
     
-    # Encode the hierarchy
+    # Encode the hierarchy (items will be auto-registered)
     encoded = processor.encode_tree(org_chart)
     
     # Query different paths

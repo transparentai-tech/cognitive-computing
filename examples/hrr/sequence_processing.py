@@ -53,38 +53,44 @@ class SequenceProcessor:
         self.item_memory.add_item(name, vector)
         return vector
     
-    def encode_sequence(self, items: List[str], method: str = "position") -> np.ndarray:
+    def encode_sequence(self, items: List[str], method: str = "positional") -> np.ndarray:
         """Encode a sequence of items."""
         # Get vectors for items
         vectors = []
         for item in items:
-            if not self.item_memory.has_item(item):
-                self.add_item(item)
-            vectors.append(self.item_memory.get_vector(item))
+            item_vector = self.item_memory.get_item(item)
+            if item_vector is None:
+                item_vector = self.add_item(item)
+            vectors.append(item_vector)
         
         # Encode the sequence
         return self.encoder.encode_sequence(vectors, method=method)
     
-    def store_sequence(self, name: str, items: List[str], method: str = "position"):
+    def store_sequence(self, name: str, items: List[str], method: str = "positional"):
         """Store a named sequence."""
         encoding = self.encode_sequence(items, method)
         self.stored_sequences[name] = encoding
         
-    def retrieve_position(self, sequence: np.ndarray, position: int) -> Tuple[str, float]:
+    def retrieve_position(self, sequence: np.ndarray, position: int, method: str = "positional") -> Tuple[str, float]:
         """Retrieve item at specific position."""
-        retrieved = self.encoder.decode_position(sequence, position)
-        name, _, confidence = self.item_memory.cleanup(retrieved)
-        return name, confidence
+        retrieved = self.encoder.decode_position(sequence, position, method=method)
+        try:
+            name, _, confidence = self.item_memory.cleanup(retrieved)
+            return name, confidence
+        except ValueError:
+            return "None", 0.0
     
     def find_in_sequence(self, sequence: np.ndarray, item: str) -> List[Tuple[int, float]]:
         """Find positions where an item appears in sequence."""
-        item_vector = self.item_memory.get_vector(item)
+        item_vector = self.item_memory.get_item(item)
+        if item_vector is None:
+            return []  # Item not in vocabulary
         positions = []
         
         # Check each position
         max_positions = 20  # Reasonable upper bound
         for pos in range(max_positions):
-            retrieved = self.encoder.decode_position(sequence, pos)
+            retrieved = self.encoder.decode_position(sequence, pos, method="positional")
             similarity = self.hrr.similarity(retrieved, item_vector)
             
             if similarity > 0.3:  # Threshold
@@ -107,7 +113,7 @@ def demonstrate_basic_sequences():
     print(f"Original sequence: {' → '.join(sequence)}")
     
     # Encode with position method
-    encoded = processor.encode_sequence(sequence, method="position")
+    encoded = processor.encode_sequence(sequence, method="positional")
     
     print("\nRetrieving items by position:")
     for i in range(len(sequence)):
@@ -132,7 +138,7 @@ def demonstrate_sequence_methods():
     sequence = ["one", "two", "three", "four", "five"]
     
     # Test both methods
-    methods = ["position", "chaining"]
+    methods = ["positional", "chaining"]
     results = {}
     
     for method in methods:
@@ -200,8 +206,8 @@ def demonstrate_sequence_completion():
         # Compare first few positions
         sim = 0
         for i in range(len(partial)):
-            retrieved_partial = processor.encoder.decode_position(partial_encoded, i)
-            retrieved_stored = processor.encoder.decode_position(stored, i)
+            retrieved_partial = processor.encoder.decode_position(partial_encoded, i, method="positional")
+            retrieved_stored = processor.encoder.decode_position(stored, i, method="positional")
             sim += processor.hrr.similarity(retrieved_partial, retrieved_stored)
         
         similarities[name] = sim / len(partial)
@@ -332,10 +338,10 @@ def demonstrate_temporal_patterns():
         weekend_sim = 0
         
         for i in range(len(partial)):
-            item_vec = processor.encoder.decode_position(partial_encoded, i)
+            item_vec = processor.encoder.decode_position(partial_encoded, i, method="positional")
             
-            weekday_item = processor.encoder.decode_position(daily_encoded, i)
-            weekend_item = processor.encoder.decode_position(weekend_encoded, i)
+            weekday_item = processor.encoder.decode_position(daily_encoded, i, method="positional")
+            weekend_item = processor.encoder.decode_position(weekend_encoded, i, method="positional")
             
             weekday_sim += processor.hrr.similarity(item_vec, weekday_item)
             weekend_sim += processor.hrr.similarity(item_vec, weekend_item)

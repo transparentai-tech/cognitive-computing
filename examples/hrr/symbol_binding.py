@@ -39,7 +39,7 @@ class SymbolicReasoner:
         # Symbol registries
         self.symbols: Dict[str, np.ndarray] = {}
         self.roles: Dict[str, np.ndarray] = {}
-        self.cleanup = CleanupMemory(CleanupMemoryConfig(threshold=0.3), dimension)
+        self.cleanup = CleanupMemory(CleanupMemoryConfig(threshold=0.15), dimension)
         
     def create_symbol(self, name: str) -> np.ndarray:
         """Create a new symbol vector."""
@@ -79,8 +79,19 @@ class SymbolicReasoner:
         filler = self.encoder.decode_filler(structure, role)
         
         # Clean up to get the symbol name
-        name, _, confidence = self.cleanup.cleanup(filler)
-        return name, confidence
+        try:
+            name, _, confidence = self.cleanup.cleanup(filler)
+            return name, confidence
+        except ValueError:
+            # If no item found above threshold, find the best match
+            best_name = None
+            best_sim = -1.0
+            for name, vec in self.symbols.items():
+                sim = self.hrr.similarity(filler, vec)
+                if sim > best_sim:
+                    best_sim = sim
+                    best_name = name
+            return best_name if best_name else "Unknown", best_sim
 
 
 def demonstrate_basic_role_filler():
