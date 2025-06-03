@@ -145,7 +145,7 @@ class TestCleanupSpaceVisualization:
         
         plt.close(fig)
     
-    @patch('cognitive_computing.hrr.visualizations.PCA')
+    @patch('sklearn.decomposition.PCA')
     def test_visualize_cleanup_space_pca(self, mock_pca):
         """Test cleanup space visualization with PCA."""
         # Mock PCA
@@ -169,7 +169,7 @@ class TestCleanupSpaceVisualization:
         
         plt.close(fig)
     
-    @patch('cognitive_computing.hrr.visualizations.TSNE')
+    @patch('sklearn.manifold.TSNE')
     def test_visualize_cleanup_space_tsne(self, mock_tsne):
         """Test cleanup space visualization with t-SNE."""
         # Mock t-SNE
@@ -201,12 +201,13 @@ class TestCleanupSpaceVisualization:
         cleanup = CleanupMemory(CleanupMemoryConfig(), dimension=100)
         cleanup.add_item("test", np.random.randn(100))
         
-        with patch('cognitive_computing.hrr.visualizations.PCA') as mock_pca:
+        with patch('sklearn.decomposition.PCA') as mock_pca:
             mock_pca_instance = Mock()
             mock_pca_instance.fit_transform.return_value = np.array([[1, 2]])
             mock_pca.return_value = mock_pca_instance
             
-            fig = visualize_cleanup_space(cleanup, interactive=True)
+            # Use PCA method since we only have 1 item (TSNE needs more)
+            fig = visualize_cleanup_space(cleanup, method="pca", interactive=True)
         
         assert fig == mock_figure
         assert mock_go.Figure.called

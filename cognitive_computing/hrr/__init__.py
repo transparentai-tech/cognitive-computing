@@ -49,7 +49,7 @@ from .utils import (
     generate_orthogonal_set,
     analyze_binding_capacity,
     measure_crosstalk,
-    test_associative_capacity,
+    measure_associative_capacity,
     to_complex,
     from_complex,
 )
@@ -94,7 +94,7 @@ __all__ = [
     "generate_orthogonal_set",
     "analyze_binding_capacity",
     "measure_crosstalk",
-    "test_associative_capacity",
+    "measure_associative_capacity",
     "to_complex",
     "from_complex",
     

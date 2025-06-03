@@ -45,6 +45,9 @@ def generate_random_vector(dimension: int,
     >>> v = generate_random_vector(1024, method="gaussian")
     >>> v_binary = generate_random_vector(1024, method="binary")
     """
+    if dimension <= 0:
+        raise ValueError(f"Dimension must be positive, got {dimension}")
+    
     rng = np.random.RandomState(seed)
     
     if method == "gaussian":
@@ -217,6 +220,15 @@ def analyze_binding_capacity(hrr: HRR, n_pairs: int,
     Dict[str, float]
         Analysis results including accuracy and capacity metrics
     """
+    if n_pairs == 0:
+        return {
+            "mean_accuracy": 0.0,
+            "std_accuracy": 0.0,
+            "mean_similarity": 0.0,
+            "min_similarity": 0.0,
+            "capacity_estimate": 0,
+        }
+    
     results = []
     
     for trial in range(n_trials):
@@ -322,7 +334,7 @@ def measure_crosstalk(hrr: HRR, vectors: List[np.ndarray]) -> float:
     return np.mean(crosstalks)
 
 
-def test_associative_capacity(hrr: HRR, n_items: int,
+def measure_associative_capacity(hrr: HRR, n_items: int,
                             item_dimension: Optional[int] = None) -> Dict[str, Any]:
     """
     Test the associative memory capacity of HRR.
@@ -344,9 +356,9 @@ def test_associative_capacity(hrr: HRR, n_items: int,
     if item_dimension is None:
         item_dimension = hrr.config.dimension
     
-    # Generate random associations
-    keys = [generate_random_vector(item_dimension) for _ in range(n_items)]
-    values = [generate_random_vector(item_dimension) for _ in range(n_items)]
+    # Generate random associations using HRR's own method to handle storage type
+    keys = [hrr.generate_vector() for _ in range(n_items)]
+    values = [hrr.generate_vector() for _ in range(n_items)]
     
     # Store associations
     start_time = time.time()
@@ -602,7 +614,7 @@ def compare_storage_methods(dimension: int = 1024,
         hrr = HRR(HRRConfig(dimension=dim, storage_method=method))
         
         # Test associative capacity
-        capacity_results = test_associative_capacity(hrr, n_items)
+        capacity_results = measure_associative_capacity(hrr, n_items)
         
         # Test performance
         perf_results = benchmark_hrr_performance(dim, 100, method)

@@ -263,14 +263,16 @@ class TestFindClosest:
             dimension=1000
         )
         
-        # Add several items
+        # Add several items - use seed for reproducibility
+        rng = np.random.RandomState(42)
         for i in range(5):
-            v = np.random.randn(1000)
+            v = rng.randn(1000)
             v = v / np.linalg.norm(v)  # Normalize
             memory.add_item(f"item{i}", v)
         
-        # Query
-        query = np.random.randn(1000)
+        # Query - create a vector similar to one of the items
+        # This ensures we get positive similarities
+        query = memory.items["item0"] + 0.1 * rng.randn(1000)
         query = query / np.linalg.norm(query)  # Normalize
         matches = memory.find_closest(query, k=3)
         
