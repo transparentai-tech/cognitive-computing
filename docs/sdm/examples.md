@@ -36,6 +36,10 @@ from cognitive_computing.sdm.visualizations import (
     visualize_memory_contents
 )
 
+# Note: The SDM module re-exports numpy as 'np' for convenience
+# from cognitive_computing import sdm
+# You can use sdm.np in examples
+
 # Set random seed for reproducibility
 np.random.seed(42)
 ```
@@ -320,8 +324,10 @@ samples_per_digit = 20
 digit_labels = {}
 
 for digit in digits:
-    # Create label vector (one-hot encoding)
-    label = np.zeros(10, dtype=np.uint8)
+    # Create label vector - IMPORTANT: Must match pattern dimension
+    # Labels must have the same dimension as patterns (1000), not number of classes (10)
+    label = np.zeros(1000, dtype=np.uint8)
+    # Use first 10 positions for one-hot encoding
     label[digit] = 1
     digit_labels[digit] = label
     
@@ -351,8 +357,8 @@ for noise_level in test_noise_levels:
             recalled_label = sdm.recall(test_pattern)
             
             if recalled_label is not None:
-                # Find predicted digit (highest activation)
-                predicted = np.argmax(recalled_label)
+                # Find predicted digit from first 10 positions (highest activation)
+                predicted = np.argmax(recalled_label[:10])
                 if predicted == digit:
                     correct += 1
             total += 1

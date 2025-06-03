@@ -109,14 +109,20 @@ proposition = encoder.encode_structure({
     "patient": symbols["mary"]
 })
 
-# Query the structure
-agent_vec = encoder.decode_filler(proposition, roles["agent"])
-agent_name, _, conf = cleanup.cleanup(agent_vec)
-print(f"Agent: {agent_name} (confidence: {conf:.3f})")
+# Query the structure with error handling
+try:
+    agent_vec = encoder.decode_filler(proposition, roles["agent"])
+    agent_name, _, conf = cleanup.cleanup(agent_vec)
+    print(f"Agent: {agent_name} (confidence: {conf:.3f})")
+except Exception as e:
+    print(f"Could not decode agent: {e}")
 
-action_vec = encoder.decode_filler(proposition, roles["action"])
-action_name, _, conf = cleanup.cleanup(action_vec)
-print(f"Action: {action_name} (confidence: {conf:.3f})")
+try:
+    action_vec = encoder.decode_filler(proposition, roles["action"])
+    action_name, _, conf = cleanup.cleanup(action_vec)
+    print(f"Action: {action_name} (confidence: {conf:.3f})")
+except Exception as e:
+    print(f"Could not decode action: {e}")
 ```
 
 ### Variable Binding
@@ -159,15 +165,19 @@ word_vectors = {word: hrr.generate_vector() for word in words}
 for word, vec in word_vectors.items():
     cleanup.add_item(word, vec)
 
-# Encode sequence
+# Encode sequence - IMPORTANT: Use "positional" not "position"
 sequence_vectors = [word_vectors[w] for w in words]
-encoded_seq = seq_encoder.encode_sequence(sequence_vectors)
+encoded_seq = seq_encoder.encode_sequence(sequence_vectors, method="positional")
+# Valid methods are: "positional", "chaining", or "temporal"
 
 # Retrieve items by position
 for i in range(len(words)):
     retrieved = seq_encoder.decode_position(encoded_seq, i)
-    word, _, conf = cleanup.cleanup(retrieved)
-    print(f"Position {i}: {word} (confidence: {conf:.3f})")
+    try:
+        word, _, conf = cleanup.cleanup(retrieved)
+        print(f"Position {i}: {word} (confidence: {conf:.3f})")
+    except Exception as e:
+        print(f"Position {i}: Could not retrieve - {e}")
 ```
 
 ### Sequence Patterns
@@ -245,10 +255,10 @@ tree = {
     }
 }
 
-# Encode the tree
+# Encode the tree - items are auto-registered
 encoded_tree = hier_encoder.encode_tree(tree)
 
-# Query paths in the tree
+# Query paths in the tree - IMPORTANT: Use decode_path not decode_subtree
 paths = [
     ["left", "value"],      # Should retrieve "A"
     ["right", "left", "value"],  # Should retrieve "E"
@@ -256,9 +266,15 @@ paths = [
 ]
 
 for path in paths:
-    result = hier_encoder.decode_subtree(encoded_tree, path)
-    # Clean up result if it's a leaf value
-    print(f"Path {path}: Retrieved vector")
+    try:
+        result = hier_encoder.decode_path(encoded_tree, path)
+        # Clean up result if it's a leaf value
+        if isinstance(result, np.ndarray):
+            # Attempt cleanup if we have a cleanup memory configured
+            # Note: HierarchicalEncoder auto-registers items during encoding
+            print(f"Path {path}: Retrieved vector successfully")
+    except Exception as e:
+        print(f"Path {path}: Could not decode - {e}")
 ```
 
 ### Organizational Hierarchy
@@ -893,7 +909,7 @@ def safe_retrieve(hrr, structure, role, cleanup):
         if np.isnan(filler).any():
             return None, 0.0
         
-        # Cleanup
+        # Cleanup - IMPORTANT: May fail if symbol not registered
         name, clean_vec, confidence = cleanup.cleanup(filler)
         
         # Verify confidence
@@ -905,6 +921,16 @@ def safe_retrieve(hrr, structure, role, cleanup):
     except Exception as e:
         print(f"Retrieval error: {e}")
         return None, 0.0
+
+# Best practice: Always handle cleanup failures
+def safe_cleanup(cleanup, vector, default="unknown"):
+    """Safely cleanup a vector with fallback."""
+    try:
+        name, _, conf = cleanup.cleanup(vector)
+        return name, conf
+    except:
+        # If cleanup fails, check if we need to register the symbol
+        return default, 0.0
 ```
 
 ### 4. Performance Optimization
