@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union, Any
 import numpy as np
+import json
 
 from ..common.base import CognitiveMemory, MemoryConfig
 
@@ -407,3 +408,55 @@ def create_vsa(dimension: int = 10000,
         **kwargs
     )
     return VSA(config)
+
+
+def save_vsa_config(config: VSAConfig, filepath: str) -> None:
+    """
+    Save VSA configuration to a JSON file.
+    
+    Parameters
+    ----------
+    config : VSAConfig
+        Configuration to save
+    filepath : str
+        Path to save the configuration
+    """
+    config_dict = {
+        'dimension': config.dimension,
+        'vector_type': config.vector_type.value,
+        'vsa_type': config.vsa_type.value,
+        'binding_operation': config.binding_operation,
+        'similarity_threshold': config.similarity_threshold,
+        'cleanup_method': config.cleanup_method,
+        'sparsity': config.sparsity,
+        'seed': config.seed
+    }
+    
+    with open(filepath, 'w') as f:
+        json.dump(config_dict, f, indent=2)
+
+
+def load_vsa_config(filepath: str) -> VSAConfig:
+    """
+    Load VSA configuration from a JSON file.
+    
+    Parameters
+    ----------
+    filepath : str
+        Path to load the configuration from
+        
+    Returns
+    -------
+    VSAConfig
+        Loaded configuration
+    """
+    with open(filepath, 'r') as f:
+        config_dict = json.load(f)
+    
+    # Convert string enums back to enum types
+    if 'vector_type' in config_dict:
+        config_dict['vector_type'] = VectorType(config_dict['vector_type'])
+    if 'vsa_type' in config_dict:
+        config_dict['vsa_type'] = VSAType(config_dict['vsa_type'])
+    
+    return VSAConfig(**config_dict)

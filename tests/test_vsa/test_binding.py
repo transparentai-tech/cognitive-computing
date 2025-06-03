@@ -16,6 +16,7 @@ from cognitive_computing.vsa.binding import (
 from cognitive_computing.vsa.vectors import (
     BinaryVector, BipolarVector, ComplexVector, TernaryVector, IntegerVector
 )
+from cognitive_computing.vsa.core import VectorType
 
 
 class TestBindingOperationBase:
@@ -46,18 +47,18 @@ class TestXORBinding:
     @pytest.fixture
     def xor_binding(self):
         """Create XOR binding instance."""
-        return XORBinding()
+        return XORBinding(VectorType.BINARY, 1000)
         
     def test_bind_binary_vectors(self, xor_binding):
         """Test XOR binding with binary vectors."""
         vec1 = BinaryVector(np.array([0, 1, 0, 1, 1, 0]))
         vec2 = BinaryVector(np.array([1, 1, 0, 0, 1, 1]))
         
-        bound = xor_binding.bind(vec1, vec2)
+        bound = xor_binding.bind(vec1.data, vec2.data)
         expected = np.array([1, 0, 0, 1, 0, 1])
         
-        assert isinstance(bound, BinaryVector)
-        assert np.array_equal(bound.data, expected)
+        assert isinstance(bound, np.ndarray)
+        assert np.array_equal(bound, expected)
         
     def test_unbind_is_bind(self, xor_binding):
         """Test that unbind is same as bind for XOR."""
@@ -106,7 +107,7 @@ class TestMultiplicationBinding:
     @pytest.fixture
     def mult_binding(self):
         """Create multiplication binding instance."""
-        return MultiplicationBinding()
+        return MultiplicationBinding(VectorType.BIPOLAR, 1000)
         
     def test_bind_bipolar_vectors(self, mult_binding):
         """Test multiplication binding with bipolar vectors."""
@@ -174,7 +175,7 @@ class TestConvolutionBinding:
     @pytest.fixture
     def conv_binding(self):
         """Create convolution binding instance."""
-        return ConvolutionBinding()
+        return ConvolutionBinding(VectorType.BIPOLAR, 1000)
         
     def test_bind_bipolar_vectors(self, conv_binding):
         """Test convolution binding with bipolar vectors."""
@@ -400,7 +401,7 @@ class TestBindingCompatibility:
     
     def test_xor_only_binary(self):
         """Test that XOR only works with binary vectors."""
-        xor = XORBinding()
+        xor = XORBinding(VectorType.BINARY, 4)
         
         # Should work with binary
         binary1 = BinaryVector(np.array([0, 1, 0, 1]))
@@ -415,7 +416,7 @@ class TestBindingCompatibility:
             
     def test_multiplication_multiple_types(self):
         """Test multiplication works with multiple vector types."""
-        mult = MultiplicationBinding()
+        mult = MultiplicationBinding(VectorType.BIPOLAR, 4)
         
         # Bipolar
         bipolar1 = BipolarVector(np.array([1, -1, 1, -1]))
@@ -437,7 +438,7 @@ class TestBindingCompatibility:
         
     def test_convolution_numeric_types(self):
         """Test convolution works with numeric vector types."""
-        conv = ConvolutionBinding()
+        conv = ConvolutionBinding(VectorType.BIPOLAR, 16)
         
         # Should work with bipolar
         bipolar1 = BipolarVector.random(16)
@@ -462,11 +463,11 @@ class TestBindingProperties:
     """Test mathematical properties of binding operations."""
     
     @pytest.mark.parametrize("binding_class,vec1,vec2,vec3", [
-        (XORBinding(), 
+        (XORBinding(VectorType.BINARY, 4), 
          BinaryVector(np.array([0, 1, 0, 1])),
          BinaryVector(np.array([1, 1, 0, 0])),
          BinaryVector(np.array([0, 0, 1, 1]))),
-        (MultiplicationBinding(),
+        (MultiplicationBinding(VectorType.BIPOLAR, 4),
          BipolarVector(np.array([1, -1, 1, -1])),
          BipolarVector(np.array([1, 1, -1, -1])),
          BipolarVector(np.array([-1, 1, 1, -1]))),
@@ -482,10 +483,10 @@ class TestBindingProperties:
             assert np.array_equal(left.data, right.data)
             
     @pytest.mark.parametrize("binding_class,vec1,vec2", [
-        (XORBinding(),
+        (XORBinding(VectorType.BINARY, 4),
          BinaryVector(np.array([0, 1, 0, 1])),
          BinaryVector(np.array([1, 1, 0, 0]))),
-        (MultiplicationBinding(),
+        (MultiplicationBinding(VectorType.BIPOLAR, 4),
          BipolarVector(np.array([1, -1, 1, -1])),
          BipolarVector(np.array([1, 1, -1, -1]))),
     ])
@@ -501,11 +502,11 @@ class TestBindingProperties:
         """Test that unbind is inverse of bind."""
         # Test with different binding types
         test_cases = [
-            (XORBinding(), BinaryVector.random(100)),
-            (MultiplicationBinding(), BipolarVector.random(100)),
-            (ConvolutionBinding(), BipolarVector.random(128)),
-            (MAPBinding(seed=42), BipolarVector.random(100)),
-            (PermutationBinding(shift=5), BipolarVector.random(100))
+            (XORBinding(VectorType.BINARY, 100), BinaryVector.random(100)),
+            (MultiplicationBinding(VectorType.BIPOLAR, 100), BipolarVector.random(100)),
+            (ConvolutionBinding(VectorType.BIPOLAR, 128), BipolarVector.random(128)),
+            (MAPBinding(VectorType.BIPOLAR, 100, seed=42), BipolarVector.random(100)),
+            (PermutationBinding(VectorType.BIPOLAR, 100, shift=5), BipolarVector.random(100))
         ]
         
         for binding, vec1 in test_cases:

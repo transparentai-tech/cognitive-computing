@@ -36,6 +36,7 @@ from .vectors import (
     BipolarVector,
     TernaryVector,
     ComplexVector,
+    IntegerVector,
     create_vector
 )
 
@@ -83,10 +84,10 @@ from .architectures import (
 # Import utilities
 from .utils import (
     generate_random_vector,
-    measure_capacity,
-    convert_vector_type,
-    analyze_binding_properties,
-    compare_architectures
+    analyze_binding_capacity,
+    convert_vector,
+    analyze_vector_distribution,
+    compare_binding_methods
 )
 
 # Define public API
@@ -96,7 +97,7 @@ __all__ = [
     
     # Vectors
     'VSAVector', 'BinaryVector', 'BipolarVector', 'TernaryVector',
-    'ComplexVector', 'create_vector',
+    'ComplexVector', 'IntegerVector', 'create_vector',
     
     # Binding
     'BindingOperation', 'XORBinding', 'MultiplicationBinding',
@@ -115,8 +116,8 @@ __all__ = [
     'BSC', 'MAP', 'FHRR', 'SparseVSA', 'HRRCompatibility',
     
     # Utils
-    'generate_random_vector', 'measure_capacity', 'convert_vector_type',
-    'analyze_binding_properties', 'compare_architectures',
+    'generate_random_vector', 'analyze_binding_capacity', 'convert_vector',
+    'analyze_vector_distribution', 'compare_binding_methods',
 ]
 
 # Log module initialization
