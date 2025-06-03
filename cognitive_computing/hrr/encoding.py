@@ -96,12 +96,14 @@ class RoleFillerEncoder:
         if role_vectors is None:
             role_vectors = {}
             for role_name in role_filler_pairs:
-                if role_name not in self.hrr.memory:
+                role_key = f"role:{role_name}"
+                stored_role = self.hrr.get_item(role_key)
+                if stored_role is None:
                     # Generate and store new role vector
                     role_vec = self.hrr.generate_vector()
-                    self.hrr.add_item(f"role:{role_name}", role_vec)
+                    self.hrr.add_item(role_key, role_vec)
                 else:
-                    role_vec = self.hrr.get_item(f"role:{role_name}")
+                    role_vec = stored_role
                 role_vectors[role_name] = role_vec
         
         # Encode all pairs

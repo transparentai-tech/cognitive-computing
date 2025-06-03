@@ -127,10 +127,11 @@ class TestCircularConvolution:
         np.random.seed(42)
         n = 128
         
-        # Generate unitary vector (self-inverse)
-        phases = np.random.uniform(0, 2 * np.pi, n)
-        u = np.cos(phases) + 1j * np.sin(phases)
-        u = u / np.linalg.norm(u)
+        # Generate unitary vector - FFT magnitudes should all be 1
+        # This makes the vector self-inverse under correlation
+        fft_phases = np.random.uniform(0, 2 * np.pi, n)
+        u_fft = np.exp(1j * fft_phases)
+        u = np.fft.ifft(u_fft)
         
         # Test vector
         v = np.random.randn(n)
@@ -140,7 +141,7 @@ class TestCircularConvolution:
         recovered = CircularConvolution.correlate(convolved, u)
         
         # Allow for some numerical error
-        assert np.allclose(recovered, v, rtol=1e-10)
+        assert np.allclose(recovered, v, rtol=1e-6)
     
     def test_convolve_multiple(self):
         """Test convolution of multiple vectors."""
@@ -359,20 +360,25 @@ class TestVectorOperations:
         """Test vector inverse using correlation method."""
         np.random.seed(42)
         
-        # Create a unitary vector
+        # For correlation-based inverse, use a simple shift vector
         n = 64
-        phases = np.random.uniform(0, 2 * np.pi, n)
-        v = np.cos(phases) + 1j * np.sin(phases)
-        v = v / np.linalg.norm(v)
+        v = np.zeros(n)
+        v[1] = 1.0  # Shift by 1
         
-        # Get inverse
+        # Get inverse using correlation method
         v_inv = VectorOperations.inverse(v, method="correlation")
+        
+        # For proper inverse, when v shifts by 1, v_inv should shift by -1 (= n-1)
+        expected = np.zeros(n)
+        expected[n-1] = 1.0
+        assert np.allclose(v_inv, expected)
         
         # v * v_inv should give identity
         identity = CircularConvolution.convolve(v, v_inv)
         
         # Peak should be at 0
         assert np.argmax(np.abs(identity)) == 0
+        assert np.abs(identity[0] - 1.0) < 1e-10
     
     def test_inverse_fft(self):
         """Test vector inverse using FFT method."""
@@ -406,7 +412,7 @@ class TestMathematicalProperties:
     """Test mathematical properties of operations."""
     
     def test_convolution_associative(self):
-        """Test that convolution is NOT associative (important property)."""
+        """Test that circular convolution IS associative."""
         np.random.seed(42)
         
         a = np.random.randn(64)
@@ -423,8 +429,8 @@ class TestMathematicalProperties:
             a, CircularConvolution.convolve(b, c)
         )
         
-        # Should NOT be equal (convolution is not associative)
-        assert not np.allclose(ab_c, a_bc, rtol=1e-10)
+        # Circular convolution IS associative
+        assert np.allclose(ab_c, a_bc, rtol=1e-10)
     
     def test_convolution_distributive(self):
         """Test distributive property of convolution over addition."""

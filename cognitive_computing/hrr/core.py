@@ -200,9 +200,8 @@ class HRR(CognitiveMemory):
         self._validate_vector(c)
         self._validate_vector(a)
         
-        # Circular correlation is convolution with conjugate-reversed a
-        a_conj = np.conj(a) if np.iscomplexobj(a) else a
-        result = np.fft.ifft(np.fft.fft(c) * np.conj(np.fft.fft(a_conj)))
+        # Circular correlation: corr(c, a) = IFFT(FFT(c) * conj(FFT(a)))
+        result = np.fft.ifft(np.fft.fft(c) * np.conj(np.fft.fft(a)))
         
         if self.config.storage_method == "real":
             result = np.real(result)
@@ -434,15 +433,25 @@ class HRR(CognitiveMemory):
             # For complex vectors, set all magnitudes to 1
             return np.exp(1j * np.angle(vector))
         else:
-            # For real vectors, make Fourier transform conjugate symmetric
+            # For real vectors, make Fourier transform have unit magnitude
+            # and conjugate symmetry
             fft = np.fft.fft(vector)
-            # Ensure conjugate symmetry
+            
+            # Set magnitudes to 1 while preserving conjugate symmetry
             n = len(vector)
+            angles = np.angle(fft)
+            
+            # First half (including DC and Nyquist if present)
+            for i in range((n + 1) // 2):
+                if i == 0 or (n % 2 == 0 and i == n // 2):
+                    # DC and Nyquist must be real for real output
+                    fft[i] = 1.0 if np.real(fft[i]) >= 0 else -1.0
+                else:
+                    fft[i] = np.exp(1j * angles[i])
+            
+            # Second half must be conjugate of first half
             for i in range(1, n // 2):
                 fft[n - i] = np.conj(fft[i])
-            if n % 2 == 0:
-                fft[n // 2] = np.real(fft[n // 2])
-            fft[0] = np.real(fft[0])
             
             result = np.real(np.fft.ifft(fft))
             if self.config.normalize:

@@ -42,10 +42,11 @@ class TestVectorGeneration:
         assert v.shape == (1000,)
         assert np.abs(np.linalg.norm(v) - 1.0) < 1e-6  # Normalized
         
-        # Should be approximately Gaussian
-        assert -4 < np.min(v) < -1
-        assert 1 < np.max(v) < 4
-        assert np.abs(np.mean(v)) < 0.1  # Centered around 0
+        # After normalization, values will be much smaller
+        # For a unit vector in 1000 dimensions, typical values are around 1/sqrt(1000) ~ 0.03
+        assert -0.2 < np.min(v) < 0
+        assert 0 < np.max(v) < 0.2
+        assert np.abs(np.mean(v)) < 0.01  # Centered around 0
     
     def test_generate_random_vector_binary(self):
         """Test binary vector generation."""

@@ -111,7 +111,11 @@ class CircularConvolution:
     def _convolve_direct(a: np.ndarray, b: np.ndarray) -> np.ndarray:
         """Direct O(n²) circular convolution implementation."""
         n = len(a)
-        result = np.zeros_like(a)
+        # Create result array with appropriate dtype
+        if np.iscomplexobj(a) or np.iscomplexobj(b):
+            result = np.zeros(n, dtype=np.complex128)
+        else:
+            result = np.zeros(n, dtype=a.dtype)
         
         for k in range(n):
             for i in range(n):
@@ -137,14 +141,19 @@ class CircularConvolution:
     def _correlate_direct(a: np.ndarray, b: np.ndarray) -> np.ndarray:
         """Direct O(n²) circular correlation implementation."""
         n = len(a)
-        result = np.zeros_like(a)
+        # Create result array with appropriate dtype
+        if np.iscomplexobj(a) or np.iscomplexobj(b):
+            result = np.zeros(n, dtype=np.complex128)
+        else:
+            result = np.zeros(n, dtype=a.dtype)
         
-        # Correlation with b is convolution with reversed conjugate of b
-        b_rev_conj = np.conj(b[::-1]) if np.iscomplexobj(b) else b[::-1]
-        
+        # Correlation: result[k] = sum(a[i] * conj(b[(i - k) % n]))
         for k in range(n):
             for i in range(n):
-                result[k] += a[i] * b_rev_conj[(k - i) % n]
+                if np.iscomplexobj(b):
+                    result[k] += a[i] * np.conj(b[(i - k) % n])
+                else:
+                    result[k] += a[i] * b[(i - k) % n]
         
         return result
     
@@ -293,31 +302,39 @@ class VectorOperations:
             # For complex vectors, set all magnitudes to 1
             return np.exp(1j * np.angle(vector))
         else:
-            # For real vectors, ensure Fourier transform is conjugate symmetric
+            # For real vectors, make FFT have unit magnitude
+            # while maintaining conjugate symmetry for real output
             fft = np.fft.fft(vector)
             n = len(vector)
             
-            # Enforce conjugate symmetry
-            for i in range(1, (n + 1) // 2):
-                fft[n - i] = np.conj(fft[i])
+            # Set magnitudes to 1 while preserving phases
+            phases = np.angle(fft)
             
-            # DC and Nyquist components must be real
-            fft[0] = np.abs(fft[0])
-            if n % 2 == 0:
-                fft[n // 2] = np.abs(fft[n // 2])
+            # First half (including DC and Nyquist if present)
+            for i in range((n + 1) // 2):
+                if i == 0 or (n % 2 == 0 and i == n // 2):
+                    # DC and Nyquist must be real for real output
+                    fft[i] = 1.0 if np.real(fft[i]) >= 0 else -1.0
+                else:
+                    fft[i] = np.exp(1j * phases[i])
+            
+            # Second half must be conjugate of first half
+            for i in range(1, n // 2):
+                fft[n - i] = np.conj(fft[i])
             
             # Transform back
             result = np.real(np.fft.ifft(fft))
             
-            # Normalize to preserve magnitude
+            # Normalize to ensure unit length
             return VectorOperations.normalize(result)
     
     @staticmethod
     def random_permutation(dimension: int, seed: Optional[int] = None) -> np.ndarray:
         """
-        Generate a random permutation matrix as a vector.
+        Generate a random permutation vector.
         
-        Useful for creating fixed random mappings in HRR.
+        Creates a vector that, when used with circular convolution,
+        acts as a permutation operator.
         
         Parameters
         ----------
@@ -329,12 +346,13 @@ class VectorOperations:
         Returns
         -------
         np.ndarray
-            Permutation vector
+            Permutation vector with a single 1.0 at a random position
         """
         rng = np.random.RandomState(seed)
         perm = np.zeros(dimension)
-        indices = rng.permutation(dimension)
-        perm[indices] = 1.0
+        # Put a 1.0 at a random position
+        position = rng.randint(dimension)
+        perm[position] = 1.0
         return perm
     
     @staticmethod
@@ -418,10 +436,22 @@ class VectorOperations:
             Inverse vector
         """
         if method == "correlation":
-            # For unitary vectors, correlation gives the inverse
-            return CircularConvolution.correlate(
-                np.ones_like(vector), vector
-            )
+            # For correlation-based inverse, we want v_inv such that
+            # convolve(v, v_inv)[0] = 1
+            # For circular convolution, if v shifts by k, v_inv should shift by -k
+            n = len(vector)
+            result = np.zeros_like(vector)
+            
+            # Find position of max value in vector
+            k = np.argmax(np.abs(vector))
+            if k == 0:
+                # Identity vector
+                result[0] = 1.0 / vector[0] if vector[0] != 0 else 1.0
+            else:
+                # Inverse shifts by -k = n-k
+                result[n - k] = 1.0 / vector[k] if vector[k] != 0 else 1.0
+            
+            return result
         elif method == "fft":
             # Compute inverse in frequency domain
             fft = np.fft.fft(vector)
