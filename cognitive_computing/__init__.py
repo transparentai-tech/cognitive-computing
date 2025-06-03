@@ -3,7 +3,7 @@ Cognitive Computing Package
 
 A comprehensive Python package for cognitive computing including:
 - Sparse Distributed Memory (SDM)
-- Holographic Reduced Representations (HRR) [Coming Soon]
+- Holographic Reduced Representations (HRR)
 - Vector Symbolic Architectures (VSA) [Coming Soon]
 - Hyperdimensional Computing (HDC) [Coming Soon]
 
@@ -26,11 +26,16 @@ try:
 except ImportError:
     pass
 
+try:
+    from cognitive_computing import hrr
+except ImportError:
+    pass
+
 # Define what's available when using "from cognitive_computing import *"
 __all__ = [
     "sdm",  # Sparse Distributed Memory
+    "hrr",  # Holographic Reduced Representations
     # Future modules:
-    # "hrr",  # Holographic Reduced Representations
     # "vsa",  # Vector Symbolic Architectures
     # "hdc",  # Hyperdimensional Computing
     "__version__",
@@ -76,6 +81,7 @@ License: {__license__}
 
 Available modules:
 - sdm: Sparse Distributed Memory
+- hrr: Holographic Reduced Representations
 
 For more information, visit:
 https://github.com/cognitive-computing/cognitive-computing

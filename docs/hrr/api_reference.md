@@ -799,10 +799,10 @@ def measure_crosstalk(hrr: HRR,
     """
 ```
 
-##### test_associative_capacity(hrr, n_items)
+##### measure_associative_capacity(hrr, n_items)
 ```python
-def test_associative_capacity(hrr: HRR, 
-                            n_items: int) -> Dict[str, Any]:
+def measure_associative_capacity(hrr: HRR, 
+                               n_items: int) -> Dict[str, Any]:
     """Test associative memory capacity.
     
     Parameters

@@ -137,7 +137,7 @@ cleanup.add_item("mary", hrr.generate_vector())
 
 # Clean up noisy vectors
 noisy_vector = retrieved + np.random.randn(1024) * 0.2
-name, clean_vector, similarity = cleanup.cleanup(noisy_vector)
+name, clean_vector, similarity = cleanup.cleanup(noisy_vector, return_similarity=True)
 ```
 
 ## Features
@@ -326,12 +326,23 @@ fig = visualize_memory_contents(sdm, interactive=True)
 
 ## Documentation
 
+### General
 - [Installation Guide](docs/installation.md)
+- [Contributing Guide](docs/contributing.md)
+
+### Sparse Distributed Memory (SDM)
 - [SDM Overview](docs/sdm/overview.md)
-- [API Reference](docs/sdm/api_reference.md)
-- [Theory and Mathematics](docs/sdm/theory.md)
-- [Examples](docs/sdm/examples.md)
-- [Performance Guide](docs/sdm/performance.md)
+- [SDM API Reference](docs/sdm/api_reference.md)
+- [SDM Theory and Mathematics](docs/sdm/theory.md)
+- [SDM Examples](docs/sdm/examples.md)
+- [SDM Performance Guide](docs/sdm/performance.md)
+
+### Holographic Reduced Representations (HRR)
+- [HRR Overview](docs/hrr/overview.md)
+- [HRR API Reference](docs/hrr/api_reference.md)
+- [HRR Theory and Mathematics](docs/hrr/theory.md)
+- [HRR Examples](docs/hrr/examples.md)
+- [HRR Performance Guide](docs/hrr/performance.md)
 
 ## Testing
 
@@ -380,12 +391,12 @@ mypy cognitive_computing
   - Comprehensive utilities and visualizations
   - Full test coverage
 
-- ✅ Holographic Reduced Representations (HRR) - **Core Complete**
+- ✅ Holographic Reduced Representations (HRR) - **Complete**
   - Circular convolution/correlation operations
   - Role-filler and sequence encoding
   - Cleanup memory implementation
-  - Comprehensive test suite (12 files)
-  - **Still needed**: Examples and documentation
+  - Full test coverage (184 tests passing)
+  - Complete documentation and examples
 
 ### Upcoming Features
 
@@ -423,8 +434,10 @@ If you use this package in your research, please cite:
 - Kanerva, P. (1988). *Sparse Distributed Memory*. MIT Press.
 - Kanerva, P. (1993). "Sparse Distributed Memory and Related Models." *Associative Neural Memories*.
 
-### Coming Soon
+### Holographic Reduced Representations
 - Plate, T. A. (1995). "Holographic Reduced Representations." *IEEE Transactions on Neural Networks*.
+
+### Coming Soon
 - Gayler, R. W. (2003). "Vector Symbolic Architectures Answer Jackendoff's Challenges for Cognitive Neuroscience."
 - Kanerva, P. (2009). "Hyperdimensional Computing: An Introduction to Computing in Distributed Representation."
 
