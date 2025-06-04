@@ -171,9 +171,10 @@ class MAP(VSA):
         # Element-wise multiplication
         result = x * y
         
-        # Add permuted versions
-        for perm in self.permutations:
-            result = result + x[perm] + y[perm]
+        # Add permuted versions if using MAP
+        if self.num_permutations > 0:
+            for perm in self.permutations:
+                result = result + x[perm] + y[perm]
         
         # Normalize based on vector type
         if self.config.normalize_result:
@@ -181,31 +182,70 @@ class MAP(VSA):
         
         return result
     
-    def unbind(self, xy: np.ndarray, y: np.ndarray) -> np.ndarray:
+    def unbind(self, xy: np.ndarray, x: np.ndarray) -> np.ndarray:
         """
         Approximate unbinding for MAP.
         
-        This is not exact but provides good approximation.
+        For MAP: unbind(bind(x,y), x) ≈ y
+        This is approximate due to the permutation additions.
         """
-        # Subtract permuted y contributions
-        result = xy
-        for perm in self.permutations:
-            result = result - y[perm]
-        
-        # Approximate division for the multiplication part
-        if self.config.vector_type in [VectorType.BIPOLAR, VectorType.TERNARY]:
-            # For discrete values, multiply by y (self-inverse property)
-            result = result * y
+        if self.num_permutations == 0:
+            # Simple multiplication - exact inverse
+            if self.config.vector_type in [VectorType.BIPOLAR, VectorType.TERNARY]:
+                # For discrete values, multiply by x (self-inverse property)
+                result = xy * x
+            else:
+                # For continuous values, divide
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    result = xy / x
+                    result[~np.isfinite(result)] = 0
         else:
-            # For continuous values, divide
-            with np.errstate(divide='ignore', invalid='ignore'):
-                result = result / y
-                result[~np.isfinite(result)] = 0
+            # MAP binding: result = normalize(x*y + sum(perm(x) + perm(y)))
+            # The normalization makes exact recovery impossible
+            # Use iterative approach for better recovery
+            
+            # Initial estimate: subtract permuted x and multiply by x
+            result = xy.copy()
+            for perm in self.permutations:
+                result = result - x[perm]
+            result = result * x
+            
+            # Iterative refinement (helps recover from normalization loss)
+            for _ in range(2):
+                # Estimate what binding would produce with current result
+                est_bound = x * result
+                for perm in self.permutations:
+                    est_bound = est_bound + x[perm] + result[perm]
+                est_bound = self.vector_factory.normalize(est_bound)
+                
+                # Compute error and update
+                error = xy - est_bound
+                result = result + 0.5 * error * x
         
         if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
         
         return result
+    
+    def permute(self, vector: np.ndarray, shift: Optional[int] = None) -> np.ndarray:
+        """
+        Apply permutation to vector.
+        
+        Parameters
+        ----------
+        vector : np.ndarray
+            Vector to permute
+        shift : int, optional
+            Not used, for compatibility with base class
+            
+        Returns
+        -------
+        np.ndarray
+            Permuted vector
+        """
+        if len(self.permutations) > 0:
+            return vector[self.permutations[0]]
+        return vector
     
     def protect(self, vector: np.ndarray, 
                 levels: int = 1) -> np.ndarray:
@@ -263,7 +303,7 @@ class FHRR(VSA):
             dimension=dimension,
             vector_type=VectorType.COMPLEX,
             vsa_type=VSAType.FHRR,
-            binding_method="multiplication",
+            binding_method="convolution",
             seed=seed
         )
         super().__init__(config)
@@ -282,12 +322,16 @@ class FHRR(VSA):
         if self.use_real:
             # Generate random real vector
             real_vec = self._rng.randn(self.config.dimension)
-            # Its FFT will have Hermitian symmetry
+            # Normalize to unit norm
+            real_vec = real_vec / np.linalg.norm(real_vec)
             return real_vec.astype(np.float32)
         else:
-            # Generate random phases
+            # Generate random complex vector with unit magnitude
             phases = self._rng.uniform(0, 2 * np.pi, self.config.dimension)
-            return np.exp(1j * phases).astype(np.complex64)
+            vec = np.exp(1j * phases).astype(np.complex128)
+            # Normalize
+            vec = vec / np.linalg.norm(vec)
+            return vec
     
     def bind(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         """
@@ -308,7 +352,7 @@ class FHRR(VSA):
         if self.use_real:
             result = np.real(result).astype(np.float32)
         else:
-            result = result.astype(np.complex64)
+            result = result.astype(np.complex128)
         
         if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
@@ -337,7 +381,7 @@ class FHRR(VSA):
         if self.use_real:
             result = np.real(result).astype(np.float32)
         else:
-            result = result.astype(np.complex64)
+            result = result.astype(np.complex128)
         
         if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
@@ -425,7 +469,7 @@ class SparseVSA(VSA):
             current_sparsity = np.count_nonzero(result == 0) / len(result)
             if current_sparsity < self.target_sparsity:
                 # Thin the result
-                result = thin(result, self.target_sparsity, method="magnitude")
+                result = self.thin(result, self.target_sparsity)
         
         return result
     

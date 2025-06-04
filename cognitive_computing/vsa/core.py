@@ -450,7 +450,7 @@ class VSA(CognitiveMemory):
             Thinned vector
         """
         from .operations import thin as ops_thin
-        return ops_thin(vector, rate, self.config.seed)
+        return ops_thin(vector, rate, method="magnitude")
     
     def unthin(self, vector: np.ndarray, original_norm: Optional[float] = None) -> np.ndarray:
         """
