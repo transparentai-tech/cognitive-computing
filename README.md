@@ -559,6 +559,7 @@ mypy cognitive_computing
   - Advanced decoders and storage mechanisms for SDM
   - Enhanced convolution operations for HRR
   - Learning and adaptation mechanisms for VSA
+  - Extreme-scale operations and quantum integration for HDC
   - Unified cognitive architecture
 
 ## Citation
