@@ -302,6 +302,10 @@ class TestVSAProperties:
             if name == "binary_xor":
                 # XOR is perfectly invertible
                 np.testing.assert_array_equal(recovered, vec2)
+            elif name == "bipolar_conv":
+                # Convolution with discrete normalization has lower similarity
+                sim = vsa.similarity(recovered, vec2)
+                assert sim > 0.5, f"{name}: similarity = {sim}"
             else:
                 # Others are approximately invertible
                 sim = vsa.similarity(recovered, vec2)

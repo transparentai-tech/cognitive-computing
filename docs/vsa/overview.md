@@ -10,7 +10,7 @@ This implementation provides a comprehensive VSA toolkit supporting multiple vec
 
 ### High-Dimensional Vectors
 
-VSA operates on high-dimensional vectors (typically 1,000-10,000 dimensions) where:
+VSA operates on high-dimensional vectors (typically 1,000-10,000 dimensions, default 1,000) where:
 - **Symbols** are represented as random vectors
 - **Similarity** is measured by vector distance/correlation
 - **Robustness** emerges from high dimensionality
@@ -128,11 +128,11 @@ Pre-configured architectures for specific applications:
 from cognitive_computing.vsa import create_vsa, VSAConfig
 
 # Create a VSA instance
-vsa = create_vsa(VSAConfig(
-    dimension=10000,
+vsa = create_vsa(
+    dimension=1000,
     vector_type='bipolar',
     binding_method='multiplication'
-))
+)
 
 # Encode symbols
 apple = vsa.encode('apple')
@@ -155,13 +155,13 @@ print(f"Apple in fruits: {similarity:.3f}")
 from cognitive_computing.vsa import create_architecture
 
 # Binary Spatter Codes for efficiency
-bsc = create_architecture('bsc', dimension=10000)
+bsc = create_architecture('bsc', dimension=1000)
 
 # MAP for robustness
-map_vsa = create_architecture('map', dimension=10000)
+map_vsa = create_architecture('map', dimension=1000)
 
 # Sparse VSA for memory efficiency
-sparse = create_architecture('sparse', dimension=10000, sparsity=0.05)
+sparse = create_architecture('sparse', dimension=1000, sparsity=0.05)
 ```
 
 ### Encoding Data

@@ -50,43 +50,49 @@ class VSAConfig(MemoryConfig):
         Type of vectors to use (binary, bipolar, ternary, complex, real)
     vsa_type : VSAType or str
         VSA architecture type (bsc, map, fhrr, hrr, sparse, custom)
-    binding_operation : str, optional
-        Default binding operation to use. If None, uses architecture default
+    binding_method : str, optional
+        Default binding method to use. If None, uses architecture default
     sparsity : float
         Sparsity level for sparse vectors (0-1, where 0 is dense)
-    normalize : bool
+    normalize_result : bool
         Whether to normalize vectors after operations
     cleanup_threshold : float
         Similarity threshold for cleanup memory (0-1)
     seed : int, optional
         Random seed for reproducibility
     """
-    dimension: int = 10000
-    vector_type: Union[VectorType, str] = VectorType.BIPOLAR
-    vsa_type: Union[VSAType, str] = VSAType.MAP
-    binding_operation: Optional[str] = None
+    dimension: int = 1000
+    vector_type: Union[VectorType, str] = "bipolar"
+    vsa_type: Union[VSAType, str] = "map"
+    binding_method: Optional[str] = None
     sparsity: float = 0.0
-    normalize: bool = True
+    normalize_result: bool = True
     cleanup_threshold: float = 0.3
     
     def __post_init__(self):
         """Validate VSA configuration parameters."""
         super().__post_init__()
         
-        # Convert string to enum if needed
+        # Validate vector type
         if isinstance(self.vector_type, str):
-            try:
-                self.vector_type = VectorType(self.vector_type.lower())
-            except ValueError:
-                raise ValueError(f"Invalid vector_type: {self.vector_type}. "
-                               f"Must be one of {[v.value for v in VectorType]}")
+            valid_types = [v.value for v in VectorType]
+            if self.vector_type.lower() not in valid_types:
+                raise ValueError(f"Unknown vector type: {self.vector_type}")
+            # Keep as string for compatibility
+        elif isinstance(self.vector_type, VectorType):
+            # Convert enum to string for consistency
+            self.vector_type = self.vector_type.value
         
+        # Validate vsa type
         if isinstance(self.vsa_type, str):
-            try:
-                self.vsa_type = VSAType(self.vsa_type.lower())
-            except ValueError:
+            valid_types = [v.value for v in VSAType]
+            if self.vsa_type.lower() not in valid_types:
                 raise ValueError(f"Invalid vsa_type: {self.vsa_type}. "
-                               f"Must be one of {[v.value for v in VSAType]}")
+                               f"Must be one of {valid_types}")
+            # Keep as string
+        elif isinstance(self.vsa_type, VSAType):
+            # Convert enum to string for consistency
+            self.vsa_type = self.vsa_type.value
         
         # Validate sparsity
         if not 0 <= self.sparsity < 1:
@@ -97,21 +103,58 @@ class VSAConfig(MemoryConfig):
             raise ValueError(f"cleanup_threshold must be in [0, 1], "
                            f"got {self.cleanup_threshold}")
         
-        # Set default binding operation based on architecture
-        if self.binding_operation is None:
-            self.binding_operation = self._get_default_binding()
+        # Set default binding method based on architecture
+        if self.binding_method is None:
+            self.binding_method = self._get_default_binding()
+        
+        # Validate binding method
+        valid_methods = ["xor", "multiplication", "convolution", "map", "permutation"]
+        if self.binding_method not in valid_methods:
+            raise ValueError(f"Unknown binding method: {self.binding_method}. "
+                           f"Must be one of {valid_methods}")
+        
+        # Validate compatibility between vector type and binding method
+        if self.binding_method == "xor" and self.vector_type != "binary":
+            raise ValueError("XOR binding only works with binary vectors")
+        
+        if self.binding_method == "convolution" and self.vector_type == "ternary":
+            raise ValueError("Convolution binding not supported for ternary vectors")
     
     def _get_default_binding(self) -> str:
-        """Get default binding operation for the VSA type."""
+        """Get default binding method for the VSA type."""
         defaults = {
-            VSAType.BSC: "xor",
-            VSAType.MAP: "map",
-            VSAType.FHRR: "convolution",
-            VSAType.HRR: "convolution",
-            VSAType.SPARSE: "multiplication",
-            VSAType.CUSTOM: "multiplication"
+            "bsc": "xor",
+            "map": "multiplication",
+            "fhrr": "convolution",
+            "hrr": "convolution",
+            "sparse": "multiplication",
+            "custom": "multiplication"
         }
         return defaults.get(self.vsa_type, "multiplication")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return {
+            'dimension': self.dimension,
+            'vector_type': self.vector_type,
+            'vsa_type': self.vsa_type,
+            'binding_method': self.binding_method,
+            'sparsity': self.sparsity,
+            'normalize_result': self.normalize_result,
+            'cleanup_threshold': self.cleanup_threshold,
+            'seed': self.seed,
+            'capacity': self.capacity,
+            'distance_metric': self.distance_metric.value
+        }
+    
+    @classmethod
+    def from_dict(cls, config_dict: Dict[str, Any]) -> 'VSAConfig':
+        """Create configuration from dictionary."""
+        # Convert distance_metric string to enum if needed
+        if 'distance_metric' in config_dict and isinstance(config_dict['distance_metric'], str):
+            from ..common.base import DistanceMetric
+            config_dict['distance_metric'] = DistanceMetric(config_dict['distance_metric'])
+        return cls(**config_dict)
 
 
 class VSA(CognitiveMemory):
@@ -141,8 +184,10 @@ class VSA(CognitiveMemory):
         Random number generator
     """
     
-    def __init__(self, config: VSAConfig):
+    def __init__(self, config: Optional[VSAConfig] = None):
         """Initialize the VSA system."""
+        if config is None:
+            config = VSAConfig()
         super().__init__(config)
         self.config = config
         self.memory: Dict[str, np.ndarray] = {}
@@ -151,22 +196,25 @@ class VSA(CognitiveMemory):
         # These will be set by _initialize
         self.binding_op = None
         self.vector_factory = None
+        self._vector_class = None
+        self._binding_op = None
         
         self._initialize()
         
     def _initialize(self):
         """Initialize VSA components based on configuration."""
         logger.debug(f"Initializing VSA with dimension={self.config.dimension}, "
-                    f"vector_type={self.config.vector_type.value}, "
-                    f"vsa_type={self.config.vsa_type.value}")
+                    f"vector_type={self.config.vector_type}, "
+                    f"vsa_type={self.config.vsa_type}")
         
         # Import here to avoid circular imports
         from .vectors import create_vector
         from .binding import create_binding
         
-        # Create vector factory
+        # Create vector factory (convert string to enum)
+        vector_type_enum = VectorType(self.config.vector_type) if isinstance(self.config.vector_type, str) else self.config.vector_type
         self.vector_factory = create_vector(
-            self.config.vector_type,
+            vector_type_enum,
             self.config.dimension,
             sparsity=self.config.sparsity,
             seed=self.config.seed
@@ -174,10 +222,15 @@ class VSA(CognitiveMemory):
         
         # Create binding operation
         self.binding_op = create_binding(
-            self.config.binding_operation,
-            vector_type=self.config.vector_type,
+            self.config.binding_method,
+            vector_type=vector_type_enum,
             dimension=self.config.dimension
         )
+        self._binding_op = self.binding_op  # Alias for tests
+        
+        # Set vector class for tests
+        if hasattr(self.vector_factory, 'vector_class'):
+            self._vector_class = self.vector_factory.vector_class
     
     def generate_vector(self, sparse: Optional[bool] = None) -> np.ndarray:
         """
@@ -214,9 +267,12 @@ class VSA(CognitiveMemory):
         np.ndarray
             Bound vector
         """
+        if x.shape != y.shape:
+            raise ValueError(f"Vector dimensions must match: {x.shape} != {y.shape}")
+        
         result = self.binding_op.bind(x, y)
         
-        if self.config.normalize:
+        if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
             
         return result
@@ -239,7 +295,7 @@ class VSA(CognitiveMemory):
         """
         result = self.binding_op.unbind(xy, y)
         
-        if self.config.normalize:
+        if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
             
         return result
@@ -262,7 +318,7 @@ class VSA(CognitiveMemory):
             Bundled vector
         """
         if len(vectors) == 0:
-            raise ValueError("Cannot bundle empty list of vectors")
+            raise ValueError("No vectors to bundle")
         
         if weights is not None:
             if len(weights) != len(vectors):
@@ -277,7 +333,7 @@ class VSA(CognitiveMemory):
         # Apply vector-type specific bundling
         result = self.vector_factory.bundle_vectors(result)
         
-        if self.config.normalize:
+        if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
             
         return result
@@ -311,7 +367,7 @@ class VSA(CognitiveMemory):
         vector : np.ndarray
             Vector to store
         """
-        if self.config.normalize:
+        if self.config.normalize_result:
             vector = self.vector_factory.normalize(vector)
         self.memory[key] = vector.copy()
     
@@ -353,16 +409,83 @@ class VSA(CognitiveMemory):
             return best_key, best_similarity
         return best_key
     
-    def clear_memory(self):
+    def permute(self, vector: np.ndarray, 
+                permutation: Optional[np.ndarray] = None,
+                shift: Optional[int] = None) -> np.ndarray:
+        """
+        Permute a vector using either explicit permutation or cyclic shift.
+        
+        Parameters
+        ----------
+        vector : np.ndarray
+            Vector to permute
+        permutation : np.ndarray, optional
+            Explicit permutation array. If None and shift is None, 
+            generates random permutation
+        shift : int, optional
+            Cyclic shift amount. Takes precedence over permutation
+            
+        Returns
+        -------
+        np.ndarray
+            Permuted vector
+        """
+        from .operations import permute as ops_permute
+        return ops_permute(vector, permutation, shift)
+    
+    def thin(self, vector: np.ndarray, rate: float) -> np.ndarray:
+        """
+        Apply thinning to a vector by randomly zeroing elements.
+        
+        Parameters
+        ----------
+        vector : np.ndarray
+            Vector to thin
+        rate : float
+            Thinning rate (0-1), proportion of elements to zero
+            
+        Returns
+        -------
+        np.ndarray
+            Thinned vector
+        """
+        from .operations import thin as ops_thin
+        return ops_thin(vector, rate, self.config.seed)
+    
+    def unthin(self, vector: np.ndarray, original_norm: Optional[float] = None) -> np.ndarray:
+        """
+        Reverse thinning by rescaling non-zero elements.
+        
+        Parameters
+        ----------
+        vector : np.ndarray
+            Thinned vector
+        original_norm : float, optional
+            Original norm to restore. If None, scales by proportion of non-zeros
+            
+        Returns
+        -------
+        np.ndarray
+            Unthinned vector
+        """
+        from .operations import unthin as ops_unthin
+        return ops_unthin(vector, original_norm)
+    
+    def clear(self):
         """Clear all stored vectors from cleanup memory."""
         self.memory.clear()
+    
+    @property
+    def size(self) -> int:
+        """Return the current number of stored items."""
+        return len(self.memory)
     
     def __repr__(self) -> str:
         """String representation of VSA."""
         return (f"VSA(dimension={self.config.dimension}, "
-                f"vector_type={self.config.vector_type.value}, "
-                f"vsa_type={self.config.vsa_type.value}, "
-                f"binding={self.config.binding_operation}, "
+                f"vector_type={self.config.vector_type}, "
+                f"vsa_type={self.config.vsa_type}, "
+                f"binding={self.config.binding_method}, "
                 f"memory_size={len(self.memory)})")
 
 
@@ -423,12 +546,12 @@ def save_vsa_config(config: VSAConfig, filepath: str) -> None:
     """
     config_dict = {
         'dimension': config.dimension,
-        'vector_type': config.vector_type.value,
-        'vsa_type': config.vsa_type.value,
-        'binding_operation': config.binding_operation,
-        'similarity_threshold': config.similarity_threshold,
-        'cleanup_method': config.cleanup_method,
+        'vector_type': config.vector_type,
+        'vsa_type': config.vsa_type,
+        'binding_method': config.binding_method,
         'sparsity': config.sparsity,
+        'normalize_result': config.normalize_result,
+        'cleanup_threshold': config.cleanup_threshold,
         'seed': config.seed
     }
     
@@ -453,10 +576,5 @@ def load_vsa_config(filepath: str) -> VSAConfig:
     with open(filepath, 'r') as f:
         config_dict = json.load(f)
     
-    # Convert string enums back to enum types
-    if 'vector_type' in config_dict:
-        config_dict['vector_type'] = VectorType(config_dict['vector_type'])
-    if 'vsa_type' in config_dict:
-        config_dict['vsa_type'] = VSAType(config_dict['vsa_type'])
-    
+    # No need to convert - keep as strings
     return VSAConfig(**config_dict)

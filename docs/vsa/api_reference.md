@@ -116,19 +116,21 @@ Configuration for VSA instances.
 class VSAConfig(MemoryConfig):
     """Configuration for Vector Symbolic Architecture."""
     
-    dimension: int = 10000
+    dimension: int = 1000
     vector_type: str = 'bipolar'
     binding_method: str = 'multiplication'
-    similarity_threshold: float = 0.3
-    cleanup_threshold: float = 0.7
+    normalize_result: bool = True
+    sparsity: float = 0.0
+    cleanup_threshold: float = 0.3
 ```
 
 **Fields:**
-- `dimension`: Vector dimensionality (default: 10000)
+- `dimension`: Vector dimensionality (default: 1000)
 - `vector_type`: Type of vectors ('binary', 'bipolar', 'ternary', 'complex', 'integer')
 - `binding_method`: Binding operation ('xor', 'multiplication', 'convolution', 'map', 'permutation')
-- `similarity_threshold`: Threshold for similarity detection
-- `cleanup_threshold`: Threshold for cleanup memory
+- `normalize_result`: Whether to normalize vectors after operations (default: True)
+- `sparsity`: Sparsity level for sparse vectors (0-1, where 0 is dense)
+- `cleanup_threshold`: Threshold for cleanup memory (default: 0.3)
 
 ## Vector Types
 
@@ -507,7 +509,7 @@ def create_vsa(config: VSAConfig) -> VSA:
 **Example:**
 ```python
 vsa = create_vsa(VSAConfig(
-    dimension=10000,
+    dimension=1000,
     vector_type='bipolar',
     binding_method='multiplication'
 ))
@@ -528,8 +530,8 @@ def create_architecture(name: str, **kwargs) -> VSA:
 
 **Example:**
 ```python
-bsc = create_architecture('bsc', dimension=10000)
-sparse = create_architecture('sparse', dimension=10000, sparsity=0.05)
+bsc = create_architecture('bsc', dimension=1000)
+sparse = create_architecture('sparse', dimension=1000, sparsity=0.05)
 ```
 
 ## Utility Functions
@@ -642,7 +644,7 @@ class UnsupportedOperationError(VSAError):
 
 ```python
 # Default dimensions
-DEFAULT_DIMENSION = 10000
+DEFAULT_DIMENSION = 1000
 MIN_DIMENSION = 100
 MAX_DIMENSION = 100000
 

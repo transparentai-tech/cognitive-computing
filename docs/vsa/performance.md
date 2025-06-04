@@ -50,7 +50,7 @@ def calculate_optimal_dimension(num_items, error_rate=0.01):
 
 | Use Case | Items | Recommended Dimension |
 |----------|-------|---------------------|
-| Small demos | < 10 | 1,000 - 2,000 |
+| Small demos | < 10 | 1,000 (default) |
 | Medium applications | 10-100 | 5,000 - 10,000 |
 | Large systems | 100-1000 | 10,000 - 50,000 |
 | Research/production | 1000+ | 50,000 - 100,000 |

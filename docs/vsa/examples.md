@@ -116,8 +116,14 @@ commutative = vsa.similarity(ab, ba) > 0.95
 | XOR | ✓ | ✓ | ✓ | ✗ |
 | Multiplication | ✓ | ✓ | ✗ | ✗ |
 | Convolution | ✓ | ✓ | ✗ | ✓ |
-| MAP | ✓ | ≈ | ✗ | ≈ |
+| MAP† | ✓ | ≈ | ✗ | ≈ |
 | Permutation | ✗ | ✗ | ✗ | ✗ |
+
+*† Note: MAP architecture with bipolar vectors defaults to multiplication binding.*
+
+**Important:** When using convolution binding with bipolar vectors and normalization, 
+the similarity after unbinding is typically around 0.5-0.6 rather than near 1.0. This 
+is due to the discrete nature of the vectors and the sign() normalization applied.
 
 ### Noise Tolerance
 

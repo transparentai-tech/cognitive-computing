@@ -518,6 +518,7 @@ def create_vector(vector_type: Union[VectorType, str],
             self.dimension = dim
             self.sparsity = sp
             self._rng = np.random.RandomState(s)
+            self.vector_class = factory_class
             
         def generate(self, sparse=False):
             if self.vector_type == VectorType.BINARY:
@@ -528,5 +529,98 @@ def create_vector(vector_type: Union[VectorType, str],
                 return TernaryVector.random(self.dimension, self.sparsity if sparse else 0.0, self._rng).data
             elif self.vector_type == VectorType.COMPLEX:
                 return ComplexVector.random(self.dimension, self._rng).data
+        
+        def normalize(self, data: np.ndarray) -> np.ndarray:
+            """Normalize a vector according to its type."""
+            # For binary vectors, threshold at 0.5
+            if self.vector_type == VectorType.BINARY:
+                return (data > 0.5).astype(np.uint8)
+            # For bipolar vectors, use sign (handle zeros)
+            elif self.vector_type == VectorType.BIPOLAR:
+                result = np.sign(data).astype(np.float32)
+                # Replace any zeros with random -1 or 1
+                zero_mask = result == 0
+                if np.any(zero_mask):
+                    result[zero_mask] = np.where(self._rng.rand(np.sum(zero_mask)) > 0.5, 1, -1)
+                return result
+            # For ternary, threshold
+            elif self.vector_type == VectorType.TERNARY:
+                result = np.zeros_like(data, dtype=np.float32)
+                result[data > 0.33] = 1
+                result[data < -0.33] = -1
+                return result
+            # For complex, normalize magnitude
+            elif self.vector_type == VectorType.COMPLEX:
+                magnitude = np.abs(data)
+                magnitude[magnitude == 0] = 1  # Avoid division by zero
+                return data / magnitude
+            else:
+                # Default: L2 normalize
+                norm = np.linalg.norm(data)
+                if norm == 0:
+                    return data
+                return data / norm
+        
+        def similarity(self, x: np.ndarray, y: np.ndarray) -> float:
+            """Calculate similarity between two vectors."""
+            if self.vector_type == VectorType.BINARY:
+                # Hamming similarity
+                hamming_dist = np.sum(x != y)
+                return 1.0 - (hamming_dist / len(x))
+            elif self.vector_type == VectorType.BIPOLAR:
+                # Cosine similarity
+                dot_product = np.dot(x, y)
+                norm_x = np.linalg.norm(x)
+                norm_y = np.linalg.norm(y)
+                if norm_x == 0 or norm_y == 0:
+                    return 0.0
+                return dot_product / (norm_x * norm_y)
+            elif self.vector_type == VectorType.TERNARY:
+                # Cosine similarity
+                dot_product = np.dot(x, y)
+                norm_x = np.linalg.norm(x)
+                norm_y = np.linalg.norm(y)
+                if norm_x == 0 or norm_y == 0:
+                    return 0.0
+                return dot_product / (norm_x * norm_y)
+            elif self.vector_type == VectorType.COMPLEX:
+                # Complex dot product similarity
+                dot_product = np.real(np.vdot(x, y))
+                norm_x = np.linalg.norm(x)
+                norm_y = np.linalg.norm(y)
+                if norm_x == 0 or norm_y == 0:
+                    return 0.0
+                return dot_product / (norm_x * norm_y)
+            else:
+                # Default cosine similarity
+                dot_product = np.dot(x, y)
+                norm_x = np.linalg.norm(x)
+                norm_y = np.linalg.norm(y)
+                if norm_x == 0 or norm_y == 0:
+                    return 0.0
+                return dot_product / (norm_x * norm_y)
+        
+        def bundle_vectors(self, summed: np.ndarray) -> np.ndarray:
+            """Apply vector-type specific bundling to summed vectors."""
+            # For binary vectors, threshold at 0.5
+            if self.vector_type == VectorType.BINARY:
+                return (summed > 0).astype(np.uint8)
+            # For bipolar, threshold at 0
+            elif self.vector_type == VectorType.BIPOLAR:
+                return np.sign(summed).astype(np.float32)
+            # For ternary, use thresholds
+            elif self.vector_type == VectorType.TERNARY:
+                result = np.zeros_like(summed, dtype=np.float32)
+                result[summed > 0.5] = 1
+                result[summed < -0.5] = -1
+                return result
+            # For complex, normalize
+            elif self.vector_type == VectorType.COMPLEX:
+                norm = np.abs(summed)
+                norm[norm == 0] = 1  # Avoid division by zero
+                return summed / norm
+            else:
+                # Default: just normalize
+                return self.normalize(summed)
     
     return VectorFactory(vector_type, dimension, sparsity, seed)
