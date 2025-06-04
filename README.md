@@ -561,6 +561,7 @@ mypy cognitive_computing
   - Learning and adaptation mechanisms for VSA
   - Extreme-scale operations and quantum integration for HDC
   - Unified cognitive architecture
+  - Complementary Technologies
 
 ## Citation
 

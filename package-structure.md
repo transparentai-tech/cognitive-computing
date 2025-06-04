@@ -22,6 +22,7 @@ cognitive-computing/
 │   ├── hrr-future-development.md    # HRR enhancement plans
 │   ├── vsa-future-development.md    # VSA enhancement plans
 │   ├── hdc-future-development.md    # HDC enhancement plans
+│   ├── planned-technologies.md      # Complementary technology dvelopment plans
 │   └── paradigm-integration.md      # Cross-paradigm integration strategy
 │
 ├── cognitive_computing.egg-info/     # Package metadata (generated)
