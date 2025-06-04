@@ -13,7 +13,7 @@ The `cognitive-computing` package provides implementations of several cognitive 
 - **Sparse Distributed Memory (SDM)** ✅ - *Fully implemented*
 - **Holographic Reduced Representations (HRR)** ✅ - *Fully implemented*
 - **Vector Symbolic Architectures (VSA)** ✅ - *Fully implemented*
-- **Hyperdimensional Computing (HDC)** 🚧 - *Coming soon*
+- **Hyperdimensional Computing (HDC)** ✅ - *Fully implemented*
 
 These technologies enable:
 - 🧠 **Brain-inspired computing** - Models based on human memory and cognition
@@ -280,6 +280,47 @@ complex_bound = fhrr.bind(a, b)  # Complex-valued binding
   - Performance benchmarking
   - Cross-architecture conversion
 
+### Hyperdimensional Computing (HDC)
+
+- **Hypervector Types**
+  - Binary hypervectors {0, 1}
+  - Bipolar hypervectors {-1, +1}
+  - Ternary hypervectors {-1, 0, +1}
+  - Level hypervectors (multi-level quantized)
+
+- **Core Operations**
+  - Binding (XOR for binary, multiplication for others)
+  - Bundling (majority vote, averaging, weighted)
+  - Permutation (cyclic shift, random, block)
+  - Similarity (Hamming, cosine, Euclidean, Jaccard)
+
+- **Classifiers**
+  - One-shot learning classifier
+  - Adaptive online classifier
+  - Ensemble voting classifier
+  - Hierarchical multi-level classifier
+
+- **Item Memory**
+  - Associative storage and retrieval
+  - Content-based cleanup
+  - Similarity queries
+  - Merge and update operations
+
+- **Encoding Strategies**
+  - Scalar encoding (thermometer, level)
+  - Categorical encoding
+  - Sequence encoding (n-gram, positional)
+  - Spatial encoding (multi-dimensional)
+  - Record encoding (structured data)
+  - N-gram text encoding
+
+- **Analysis and Utilities**
+  - Capacity measurement
+  - Noise robustness testing
+  - Performance benchmarking
+  - Binding property analysis
+  - Similarity distribution analysis
+
 ## Examples
 
 ### Pattern Recognition
@@ -425,6 +466,13 @@ fig = visualize_memory_contents(sdm, interactive=True)
 - [VSA Examples](docs/vsa/examples.md)
 - [VSA Performance Guide](docs/vsa/performance.md)
 
+### Hyperdimensional Computing (HDC)
+- [HDC Overview](docs/hdc/overview.md)
+- [HDC API Reference](docs/hdc/api_reference.md)
+- [HDC Theory and Mathematics](docs/hdc/theory.md)
+- [HDC Examples](docs/hdc/examples.md)
+- [HDC Performance Guide](docs/hdc/performance.md)
+
 ## Testing
 
 Run the test suite:
@@ -485,18 +533,21 @@ mypy cognitive_computing
   - Comprehensive encoding strategies and utilities
   - Near-complete test coverage (294/295 tests passing - 99.7%)
 
+- ✅ **Hyperdimensional Computing (HDC)** - **Complete**
+  - Four hypervector types (binary, bipolar, ternary, level)
+  - Core operations (bind, bundle, permute, similarity)
+  - Item memory with associative retrieval
+  - Advanced classifiers (one-shot, adaptive, ensemble, hierarchical)
+  - Multiple encoding strategies (scalar, categorical, sequence, spatial, n-gram)
+  - Full test coverage (193/193 tests passing - 100%)
+
 ### Package Statistics
-- **Total Tests**: 705 (704 passing, 1 skipped - 99.86% success rate)
-- **Total Modules**: 27 core implementation files
-- **Example Scripts**: 15 (all tested and working)
+- **Total Tests**: 898 (897 passing, 1 skipped - 99.89% success rate)
+- **Total Modules**: 36 core implementation files
+- **Example Scripts**: 20 (all tested and working)
 - **Documentation**: Complete API references, theory guides, and examples
 
 ### Upcoming Features
-
-- 🚧 **Hyperdimensional Computing (HDC)**
-  - Random indexing
-  - Item memory
-  - Classification capabilities
 
 - 🚧 **Advanced Integration Features**
   - Cross-paradigm operations
@@ -548,4 +599,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Note**: This package is ready for production use! All three core paradigms (SDM, HRR, VSA) are fully implemented with comprehensive test coverage (99.86%). The package is actively maintained and we welcome contributions for HDC and advanced features.
+**Note**: This package is ready for production use! All four core paradigms (SDM, HRR, VSA, HDC) are fully implemented with comprehensive test coverage (99.89%). The package is actively maintained and we welcome contributions for advanced integration features.
