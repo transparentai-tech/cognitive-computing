@@ -556,14 +556,14 @@ class HRRCompatibility(VSA):
     def bind(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         """HRR binding via circular convolution."""
         if self.use_native_hrr:
-            return self.hrr_ops.circular_convolution(x, y)
+            return self.hrr_ops.CircularConvolution.convolve(x, y)
         else:
             return super().bind(x, y)
     
     def unbind(self, xy: np.ndarray, y: np.ndarray) -> np.ndarray:
         """HRR unbinding via circular correlation."""
         if self.use_native_hrr:
-            return self.hrr_ops.circular_correlation(xy, y)
+            return self.hrr_ops.CircularConvolution.correlate(xy, y)
         else:
             return super().unbind(xy, y)
     
