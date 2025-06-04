@@ -1,5 +1,34 @@
 # VSA API Reference
 
+## Important API Design Notes
+
+**Array-Based API**: VSA uses numpy arrays directly in its public API, not vector objects. This design choice ensures:
+- Consistency with SDM and HRR modules
+- Better performance (no object overhead)
+- Easier integration with scientific computing libraries
+- Direct manipulation of vector data when needed
+
+**No Factory Functions for Architectures**: Use architecture classes directly:
+```python
+# Correct
+from cognitive_computing.vsa import BSC, MAP, FHRR
+bsc = BSC(dimension=1000)
+map_arch = MAP(dimension=1000)
+
+# Incorrect (no create_architecture function)
+# arch = create_architecture('bsc', dimension=1000)  # Does not exist
+```
+
+**Vector Generation**: Use `generate_vector()` method or utility functions:
+```python
+# Generate vectors
+vector = vsa.generate_vector()
+sparse_vector = vsa.generate_vector(sparse=True)
+
+# No encode() method for arbitrary items
+# apple = vsa.encode('apple')  # Does not exist
+```
+
 ## Core Classes
 
 ### VSA
@@ -16,60 +45,60 @@ class VSA(CognitiveMemory):
 ##### `__init__(config: VSAConfig)`
 Initialize a VSA instance with the specified configuration.
 
-##### `encode(item: Any) -> VSAVector`
-Encode an item into a VSA vector.
+##### `generate_vector(sparse: Optional[bool] = None) -> np.ndarray`
+Generate a random vector of the configured type.
 
 **Parameters:**
-- `item`: Item to encode (string, number, or any hashable)
+- `sparse`: Whether to generate a sparse vector (overrides config)
 
 **Returns:**
-- VSA vector representation
+- NumPy array representing the vector
 
 **Example:**
 ```python
-apple = vsa.encode('apple')
-number = vsa.encode(42)
+apple = vsa.generate_vector()
+sparse_vec = vsa.generate_vector(sparse=True)
 ```
 
-##### `bind(x: VSAVector, y: VSAVector) -> VSAVector`
+##### `bind(x: np.ndarray, y: np.ndarray) -> np.ndarray`
 Bind two vectors using the configured binding operation.
 
 **Parameters:**
-- `x`: First vector
-- `y`: Second vector
+- `x`: First vector (numpy array)
+- `y`: Second vector (numpy array)
 
 **Returns:**
-- Bound vector
+- Bound vector (numpy array)
 
 **Example:**
 ```python
 red_apple = vsa.bind(red, apple)
 ```
 
-##### `unbind(xy: VSAVector, y: VSAVector) -> VSAVector`
+##### `unbind(xy: np.ndarray, y: np.ndarray) -> np.ndarray`
 Unbind a vector to retrieve the other component.
 
 **Parameters:**
-- `xy`: Bound vector
-- `y`: Known component
+- `xy`: Bound vector (numpy array)
+- `y`: Known component (numpy array)
 
 **Returns:**
-- Retrieved vector
+- Retrieved vector (numpy array)
 
 **Example:**
 ```python
 retrieved_apple = vsa.unbind(red_apple, red)
 ```
 
-##### `bundle(vectors: List[VSAVector], weights: Optional[List[float]] = None) -> VSAVector`
+##### `bundle(vectors: List[np.ndarray], weights: Optional[List[float]] = None) -> np.ndarray`
 Bundle multiple vectors into a single representation.
 
 **Parameters:**
-- `vectors`: List of vectors to bundle
+- `vectors`: List of vectors to bundle (numpy arrays)
 - `weights`: Optional weights for weighted bundling
 
 **Returns:**
-- Bundled vector
+- Bundled vector (numpy array)
 
 **Example:**
 ```python
@@ -77,12 +106,12 @@ fruits = vsa.bundle([apple, banana, orange])
 weighted = vsa.bundle([v1, v2], weights=[0.7, 0.3])
 ```
 
-##### `similarity(x: VSAVector, y: VSAVector) -> float`
+##### `similarity(x: np.ndarray, y: np.ndarray) -> float`
 Compute similarity between two vectors.
 
 **Parameters:**
-- `x`: First vector
-- `y`: Second vector
+- `x`: First vector (numpy array)
+- `y`: Second vector (numpy array)
 
 **Returns:**
 - Similarity score in [-1, 1]
@@ -92,20 +121,40 @@ Compute similarity between two vectors.
 sim = vsa.similarity(apple, fruits)
 ```
 
-##### `zero() -> VSAVector`
-Get the zero vector for the current vector type.
+##### `permute(vector: np.ndarray, permutation: Optional[np.ndarray] = None, shift: Optional[int] = None) -> np.ndarray`
+Permute elements of a vector.
 
-##### `identity() -> VSAVector`
-Get the identity vector for the current binding operation.
+**Parameters:**
+- `vector`: Vector to permute (numpy array)
+- `permutation`: Explicit permutation array (optional)
+- `shift`: Cyclic shift amount (takes precedence over permutation)
 
-##### `inverse(x: VSAVector) -> VSAVector`
-Get the inverse of a vector for unbinding.
+**Returns:**
+- Permuted vector (numpy array)
 
-##### `permute(x: VSAVector, n: int) -> VSAVector`
-Permute vector elements by n positions.
+**Example:**
+```python
+shifted = vsa.permute(vector, shift=1)
+rev_shifted = vsa.permute(shifted, shift=-1)
+```
 
-##### `thin(x: VSAVector, sparsity: float) -> VSAVector`
-Create a sparse version of the vector.
+##### `thin(vector: np.ndarray, rate: float) -> np.ndarray`
+Apply thinning to a vector by randomly zeroing elements.
+
+**Parameters:**
+- `vector`: Vector to thin (numpy array)
+- `rate`: Thinning rate (0-1), proportion of elements to zero
+
+**Returns:**
+- Thinned vector (numpy array)
+
+**Example:**
+```python
+sparse = vsa.thin(dense_vector, rate=0.9)  # Zero out 90%, keep 10% of elements
+```
+
+**Note**: The `rate` parameter specifies the fraction to zero out, not the sparsity level. Rate=0.9 means 90% zeros, 10% non-zero.
+
 
 ### VSAConfig
 
@@ -118,7 +167,8 @@ class VSAConfig(MemoryConfig):
     
     dimension: int = 1000
     vector_type: str = 'bipolar'
-    binding_method: str = 'multiplication'
+    vsa_type: str = 'map'
+    binding_method: Optional[str] = None
     normalize_result: bool = True
     sparsity: float = 0.0
     cleanup_threshold: float = 0.3
@@ -127,43 +177,58 @@ class VSAConfig(MemoryConfig):
 **Fields:**
 - `dimension`: Vector dimensionality (default: 1000)
 - `vector_type`: Type of vectors ('binary', 'bipolar', 'ternary', 'complex', 'integer')
-- `binding_method`: Binding operation ('xor', 'multiplication', 'convolution', 'map', 'permutation')
+- `vsa_type`: VSA architecture type ('bsc', 'map', 'fhrr', 'hrr', 'sparse', 'custom')
+- `binding_method`: Binding operation ('xor', 'multiplication', 'convolution', 'map', 'permutation'). If None, uses architecture default
 - `normalize_result`: Whether to normalize vectors after operations (default: True)
 - `sparsity`: Sparsity level for sparse vectors (0-1, where 0 is dense)
 - `cleanup_threshold`: Threshold for cleanup memory (default: 0.3)
 
 ## Vector Types
 
-### BinaryVector
+### Vector Types
 
-Binary vectors with values in {0, 1}.
+VSA works with numpy arrays directly. Vector types are specified in the configuration and determine the internal representation and operations. The `generate_random_vector` utility function can create vectors of any type:
 
 ```python
-class BinaryVector(VSAVector):
-    """Binary vector implementation."""
+from cognitive_computing.vsa import generate_random_vector, BinaryVector, BipolarVector
+
+# Generate different vector types
+binary_vec = generate_random_vector(1000, BinaryVector)
+bipolar_vec = generate_random_vector(1000, BipolarVector)
+ternary_vec = generate_random_vector(1000, TernaryVector, sparsity=0.1)
+complex_vec = generate_random_vector(1000, ComplexVector)
+integer_vec = generate_random_vector(1000, IntegerVector, modulus=256)
 ```
 
-#### Class Methods
+#### BinaryVector
+- Values: {0, 1}
+- Default binding: XOR
+- Similarity: Hamming distance
+- Use case: Hardware-efficient implementations
 
-##### `random(dimension: int) -> BinaryVector`
-Generate a random binary vector.
+#### BipolarVector  
+- Values: {-1, +1}
+- Default binding: Multiplication
+- Similarity: Cosine similarity
+- Use case: General-purpose VSA
 
-##### `zeros(dimension: int) -> BinaryVector`
-Create an all-zeros vector.
+#### TernaryVector
+- Values: {-1, 0, +1}
+- Sparse representation
+- Default binding: Multiplication
+- Use case: Memory-efficient sparse coding
 
-##### `ones(dimension: int) -> BinaryVector`
-Create an all-ones vector.
+#### ComplexVector
+- Values: Complex numbers on unit circle
+- Default binding: Complex multiplication
+- Similarity: Complex dot product
+- Use case: Frequency domain operations
 
-#### Instance Methods
-
-##### `bind(other: BinaryVector) -> BinaryVector`
-XOR binding operation.
-
-##### `similarity(other: BinaryVector) -> float`
-Hamming similarity.
-
-##### `to_bipolar() -> BipolarVector`
-Convert to bipolar representation.
+#### IntegerVector
+- Values: Integers modulo N
+- Default binding: Modular addition
+- Similarity: Modular distance
+- Use case: Discrete symbolic operations
 
 ### BipolarVector
 
@@ -332,25 +397,7 @@ Encode text using random indexing.
 ##### `encode_ngrams(text: str) -> List[VSAVector]`
 Encode text as n-grams.
 
-### SequenceEncoder
-
-Encode sequential data.
-
-```python
-class SequenceEncoder:
-    """Encoder for sequential data."""
-    
-    def __init__(self, vsa: VSA)
-```
-
-#### Methods
-
-##### `encode_sequence(items: List[VSAVector], method: str = 'positional') -> VSAVector`
-Encode a sequence of vectors.
-
-**Parameters:**
-- `items`: List of vectors
-- `method`: Encoding method ('positional', 'chaining', 'temporal')
+**Note**: RandomIndexingEncoder handles sequence encoding. There is no separate SequenceEncoder class.
 
 ### SpatialEncoder
 
@@ -466,6 +513,8 @@ Optimized for:
 - Multiple bindings
 - Cognitive modeling
 
+**Note**: MAP unbinding is approximate. Expect similarity ~0.3 after unbinding due to the permutation additions.
+
 ### FHRR (Fourier HRR)
 
 ```python
@@ -479,6 +528,8 @@ Optimized for:
 - Frequency domain operations
 - HRR compatibility
 - Complex vectors
+
+**Note**: FHRR uses unit norm vectors (not unit magnitude per element). Expect similarity ~0.35-0.4 after unbinding due to FFT-based convolution.
 
 ### SparseVSA
 
@@ -495,43 +546,69 @@ Optimized for:
 - Large-scale systems
 - Biological plausibility
 
+**Note**: The `sparsity` parameter represents the fraction of zeros (e.g., 0.95 = 95% zeros, 5% non-zero).
+
 ## Factory Functions
 
 ### create_vsa
 
-Create a VSA instance with configuration.
+Create a VSA instance with the specified parameters.
 
 ```python
-def create_vsa(config: VSAConfig) -> VSA:
-    """Create VSA instance from configuration."""
-```
-
-**Example:**
-```python
-vsa = create_vsa(VSAConfig(
-    dimension=1000,
-    vector_type='bipolar',
-    binding_method='multiplication'
-))
-```
-
-### create_architecture
-
-Create a specific VSA architecture.
-
-```python
-def create_architecture(name: str, **kwargs) -> VSA:
-    """Create a specific VSA architecture."""
+def create_vsa(dimension: int, 
+               vector_type: Union[str, VectorType],
+               vsa_type: Union[str, VSAType],
+               **kwargs) -> VSA:
+    """Create VSA instance with configuration."""
 ```
 
 **Parameters:**
-- `name`: Architecture name ('bsc', 'map', 'fhrr', 'sparse', 'hrr')
-- `**kwargs`: Architecture-specific parameters
+- `dimension`: Vector dimension
+- `vector_type`: Type of vectors ('binary', 'bipolar', 'ternary', 'complex', 'integer')
+- `vsa_type`: VSA architecture ('bsc', 'map', 'fhrr', 'hrr', 'sparse', 'custom')
+- `**kwargs`: Additional configuration parameters
 
 **Example:**
 ```python
-bsc = create_architecture('bsc', dimension=1000)
-sparse = create_architecture('sparse', dimension=1000, sparsity=0.05)
+# Create Binary Spatter Codes
+vsa = create_vsa(
+    dimension=1000,
+    vector_type='binary',
+    vsa_type='bsc'
+)
+
+# Create MAP architecture
+vsa = create_vsa(
+    dimension=1000,
+    vector_type='bipolar',
+    vsa_type='map'
+)
+
+# Create custom VSA with specific binding
+vsa = create_vsa(
+    dimension=1000,
+    vector_type='bipolar',
+    vsa_type='custom',
+    binding_method='multiplication'
+)
+```
+
+### Architecture Classes
+
+Direct instantiation of architecture classes:
+
+```python
+# Binary Spatter Codes
+bsc = BSC(dimension=1000)
+
+# MAP Architecture  
+map_arch = MAP(dimension=1000)
+
+# Fourier HRR
+fhrr = FHRR(dimension=1000)
+
+# Sparse VSA
+sparse = SparseVSA(dimension=1000, sparsity=0.95)
 ```
 
 ## Utility Functions

@@ -12,8 +12,9 @@ This script demonstrates the core features of VSA including:
 import numpy as np
 from cognitive_computing.vsa import (
     create_vsa, VSAConfig,
+    BSC, MAP, FHRR, SparseVSA,
     BinaryVector, BipolarVector, TernaryVector, ComplexVector, IntegerVector,
-    create_architecture
+    generate_random_vector
 )
 
 
@@ -25,38 +26,38 @@ def demonstrate_vector_types():
     
     # Binary vectors
     print("1. Binary Vectors (0/1):")
-    binary_vec = BinaryVector.random(dimension)
+    binary_vec = generate_random_vector(dimension, BinaryVector)
     print(f"   Sample values: {binary_vec.data[:10]}")
     print(f"   Density: {np.mean(binary_vec.data):.3f}")
-    print(f"   Self-similarity: {binary_vec.similarity(binary_vec):.3f}\n")
+    print(f"   Hamming weight: {np.sum(binary_vec.data)}\n")
     
     # Bipolar vectors
     print("2. Bipolar Vectors (-1/+1):")
-    bipolar_vec = BipolarVector.random(dimension)
+    bipolar_vec = generate_random_vector(dimension, BipolarVector)
     print(f"   Sample values: {bipolar_vec.data[:10]}")
     print(f"   Mean: {np.mean(bipolar_vec.data):.3f}")
     print(f"   Norm: {np.linalg.norm(bipolar_vec.data):.3f}\n")
     
     # Ternary vectors
     print("3. Ternary Vectors (-1/0/+1):")
-    ternary_vec = TernaryVector.random(dimension, sparsity=0.1)
+    ternary_vec = generate_random_vector(dimension, TernaryVector, sparsity=0.1)
     print(f"   Sample values: {ternary_vec.data[:20]}")
     print(f"   Sparsity: {np.mean(ternary_vec.data == 0):.3f}")
     print(f"   Active elements: {np.sum(ternary_vec.data != 0)}\n")
     
     # Complex vectors
     print("4. Complex Vectors (unit circle):")
-    complex_vec = ComplexVector.random(dimension)
+    complex_vec = generate_random_vector(dimension, ComplexVector)
     print(f"   Sample values: {complex_vec.data[:5]}")
     print(f"   Magnitudes: {np.abs(complex_vec.data[:5])}")
     print(f"   All unit magnitude: {np.allclose(np.abs(complex_vec.data), 1.0)}\n")
     
     # Integer vectors
     print("5. Integer Vectors (modular):")
-    integer_vec = IntegerVector.random(dimension, modulus=256)
+    integer_vec = generate_random_vector(dimension, IntegerVector, modulus=256)
     print(f"   Sample values: {integer_vec.data[:10]}")
     print(f"   Range: [{np.min(integer_vec.data)}, {np.max(integer_vec.data)}]")
-    print(f"   Modulus: {integer_vec.modulus}\n")
+    print(f"   Mean: {np.mean(integer_vec.data):.3f}\n")
 
 
 def demonstrate_binding_operations():
@@ -67,15 +68,15 @@ def demonstrate_binding_operations():
     
     # Create VSA with binary vectors and XOR binding
     print("1. XOR Binding (Binary Vectors):")
-    vsa_xor = create_vsa(VSAConfig(
+    vsa_xor = create_vsa(
         dimension=dimension,
         vector_type='binary',
-        binding_method='xor'
-    ))
+        vsa_type='bsc'  # BSC uses XOR binding by default
+    )
     
     # Create symbols
-    apple = vsa_xor.encode('apple')
-    red = vsa_xor.encode('red')
+    apple = vsa_xor.generate_vector()
+    red = vsa_xor.generate_vector()
     
     # Bind them
     red_apple = vsa_xor.bind(red, apple)
@@ -86,18 +87,21 @@ def demonstrate_binding_operations():
     print(f"   Binding: red ⊕ apple")
     print(f"   Unbinding: red_apple ⊕ red → apple")
     print(f"   Similarity to apple: {similarity:.3f}")
-    print(f"   Self-inverse property: {vsa_xor.similarity(vsa_xor.bind(red, red), vsa_xor.zero()):.3f}\n")
+    # XOR is self-inverse: A ⊕ A = 0
+    zero_vec = vsa_xor.bind(red, red)
+    print(f"   Self-inverse property (red ⊕ red ≈ 0): mean = {np.mean(zero_vec):.3f}\n")
     
     # Multiplication binding
     print("2. Multiplication Binding (Bipolar Vectors):")
-    vsa_mult = create_vsa(VSAConfig(
+    vsa_mult = create_vsa(
         dimension=dimension,
         vector_type='bipolar',
+        vsa_type='custom',
         binding_method='multiplication'
-    ))
+    )
     
-    car = vsa_mult.encode('car')
-    blue = vsa_mult.encode('blue')
+    car = vsa_mult.generate_vector()
+    blue = vsa_mult.generate_vector()
     blue_car = vsa_mult.bind(blue, car)
     retrieved_car = vsa_mult.unbind(blue_car, blue)
     print(f"   Binding: blue × car")
@@ -105,14 +109,14 @@ def demonstrate_binding_operations():
     
     # Convolution binding (HRR-style)
     print("3. Convolution Binding (Complex Vectors):")
-    vsa_conv = create_vsa(VSAConfig(
+    vsa_conv = create_vsa(
         dimension=dimension,
         vector_type='complex',
-        binding_method='convolution'
-    ))
+        vsa_type='fhrr'  # FHRR uses convolution
+    )
     
-    book = vsa_conv.encode('book')
-    science = vsa_conv.encode('science')
+    book = vsa_conv.generate_vector()
+    science = vsa_conv.generate_vector()
     science_book = vsa_conv.bind(science, book)
     retrieved_book = vsa_conv.unbind(science_book, science)
     print(f"   Binding: science ⊛ book")
@@ -120,28 +124,29 @@ def demonstrate_binding_operations():
     
     # MAP binding
     print("4. MAP Binding (Multiply-Add-Permute):")
-    vsa_map = create_vsa(VSAConfig(
+    vsa_map = create_vsa(
         dimension=dimension,
         vector_type='bipolar',
-        binding_method='map'
-    ))
+        vsa_type='map'
+    )
     
-    cat = vsa_map.encode('cat')
-    black = vsa_map.encode('black')
+    cat = vsa_map.generate_vector()
+    black = vsa_map.generate_vector()
     black_cat = vsa_map.bind(black, cat)
     print(f"   MAP combines multiplication, addition, and permutation")
     print(f"   More robust for multiple bindings\n")
     
     # Permutation binding
     print("5. Permutation Binding:")
-    vsa_perm = create_vsa(VSAConfig(
+    vsa_perm = create_vsa(
         dimension=dimension,
         vector_type='bipolar',
+        vsa_type='custom',
         binding_method='permutation'
-    ))
+    )
     
-    dog = vsa_perm.encode('dog')
-    brown = vsa_perm.encode('brown')
+    dog = vsa_perm.generate_vector()
+    brown = vsa_perm.generate_vector()
     brown_dog = vsa_perm.bind(brown, dog)
     print(f"   Uses cyclic shifts for binding")
     print(f"   Efficient for sequential data\n")
@@ -152,16 +157,17 @@ def demonstrate_vsa_operations():
     print("=== VSA Operations Demo ===\n")
     
     # Create VSA instance
-    vsa = create_vsa(VSAConfig(
+    vsa = create_vsa(
         dimension=1000,
         vector_type='bipolar',
+        vsa_type='custom',
         binding_method='multiplication'
-    ))
+    )
     
     # Bundling (superposition)
     print("1. Bundling (Superposition):")
     fruits = ['apple', 'banana', 'orange', 'grape']
-    fruit_vectors = [vsa.encode(f) for f in fruits]
+    fruit_vectors = [vsa.generate_vector() for f in fruits]
     fruit_bundle = vsa.bundle(fruit_vectors)
     
     # Check similarity to each fruit
@@ -181,10 +187,10 @@ def demonstrate_vsa_operations():
     
     # Permutation operations
     print("3. Permutation Operations:")
-    vector = vsa.encode('test')
-    perm1 = vsa.permute(vector, 1)
-    perm2 = vsa.permute(vector, 2)
-    inv_perm = vsa.permute(perm1, -1)
+    vector = vsa.generate_vector()
+    perm1 = vsa.permute(vector, shift=1)
+    perm2 = vsa.permute(vector, shift=2)
+    inv_perm = vsa.permute(perm1, shift=-1)
     
     print(f"   Original → Permute(1): similarity = {vsa.similarity(vector, perm1):.3f}")
     print(f"   Permute(1) → Permute(2): similarity = {vsa.similarity(perm1, perm2):.3f}")
@@ -193,12 +199,11 @@ def demonstrate_vsa_operations():
     
     # Thinning (sparsification)
     print("4. Thinning Operations:")
-    dense_vec = vsa.encode('dense')
-    thinned_vec = vsa.thin(dense_vec, sparsity=0.9)
+    dense_vec = vsa.generate_vector()
+    thinned_vec = vsa.thin(dense_vec, rate=0.9)
     
-    if hasattr(dense_vec, 'density'):
-        print(f"   Original density: {dense_vec.density():.3f}")
-        print(f"   Thinned density: {thinned_vec.density():.3f}")
+    print(f"   Original non-zero elements: {np.count_nonzero(dense_vec)}")
+    print(f"   Thinned non-zero elements: {np.count_nonzero(thinned_vec)}")
     print(f"   Similarity after thinning: {vsa.similarity(dense_vec, thinned_vec):.3f}\n")
 
 
@@ -207,23 +212,24 @@ def demonstrate_symbolic_reasoning():
     print("=== Symbolic Reasoning Demo ===\n")
     
     # Create VSA for reasoning
-    vsa = create_vsa(VSAConfig(
+    vsa = create_vsa(
         dimension=2000,
         vector_type='bipolar',
+        vsa_type='custom',
         binding_method='multiplication'
-    ))
+    )
     
     # 1. Role-filler binding
     print("1. Role-Filler Binding:")
     # Roles
-    color_role = vsa.encode('COLOR')
-    size_role = vsa.encode('SIZE')
-    type_role = vsa.encode('TYPE')
+    color_role = vsa.generate_vector()
+    size_role = vsa.generate_vector()
+    type_role = vsa.generate_vector()
     
     # Fillers
-    red = vsa.encode('red')
-    large = vsa.encode('large')
-    apple = vsa.encode('apple')
+    red = vsa.generate_vector()
+    large = vsa.generate_vector()
+    apple = vsa.generate_vector()
     
     # Create structured representation
     red_large_apple = vsa.bundle([
@@ -244,13 +250,14 @@ def demonstrate_symbolic_reasoning():
     # 2. Analogical reasoning
     print("2. Analogical Reasoning (A:B :: C:?):")
     # King:Queen :: Man:?
-    king = vsa.encode('king')
-    queen = vsa.encode('queen')
-    man = vsa.encode('man')
-    woman = vsa.encode('woman')
+    king = vsa.generate_vector()
+    queen = vsa.generate_vector()
+    man = vsa.generate_vector()
+    woman = vsa.generate_vector()
     
     # Learn the transformation
-    transform = vsa.bind(queen, vsa.inverse(king))
+    # For multiplication binding, inverse is the same vector (element-wise division)
+    transform = vsa.bind(queen, king)
     
     # Apply to man
     result = vsa.bind(transform, man)
@@ -262,13 +269,13 @@ def demonstrate_symbolic_reasoning():
     # 3. Set membership
     print("3. Set Membership:")
     # Create sets
-    mammals = vsa.bundle([vsa.encode(x) for x in ['dog', 'cat', 'horse', 'cow']])
-    birds = vsa.bundle([vsa.encode(x) for x in ['eagle', 'sparrow', 'owl', 'robin']])
+    mammals = vsa.bundle([vsa.generate_vector() for x in ['dog', 'cat', 'horse', 'cow']])
+    birds = vsa.bundle([vsa.generate_vector() for x in ['eagle', 'sparrow', 'owl', 'robin']])
     
     # Test membership
-    dog = vsa.encode('dog')
-    eagle = vsa.encode('eagle')
-    fish = vsa.encode('fish')
+    dog = vsa.generate_vector()
+    eagle = vsa.generate_vector()
+    fish = vsa.generate_vector()
     
     print(f"   'dog' in mammals: {vsa.similarity(mammals, dog):.3f}")
     print(f"   'eagle' in mammals: {vsa.similarity(mammals, eagle):.3f}")
@@ -284,43 +291,54 @@ def demonstrate_architectures():
     
     # Binary Spatter Codes (BSC)
     print("1. Binary Spatter Codes (BSC):")
-    bsc = create_architecture('bsc', dimension=dimension)
-    a = bsc.encode('A')
-    b = bsc.encode('B')
+    bsc = BSC(dimension=dimension)
+    a = bsc.generate_vector()
+    b = bsc.generate_vector()
     c = bsc.bind(a, b)
     print(f"   Vector type: Binary")
     print(f"   Binding: XOR")
-    print(f"   Efficient for hardware implementation\n")
+    print(f"   Efficient for hardware implementation")
+    # Test unbinding
+    retrieved_a = bsc.unbind(c, b)
+    print(f"   Unbind test: similarity(unbind(c,b), a) = {bsc.similarity(retrieved_a, a):.3f}\n")
     
     # MAP Architecture
     print("2. MAP Architecture:")
-    map_arch = create_architecture('map', dimension=dimension)
-    x = map_arch.encode('X')
-    y = map_arch.encode('Y')
+    map_arch = MAP(dimension=dimension)
+    x = map_arch.generate_vector()
+    y = map_arch.generate_vector()
     z = map_arch.bind(x, y)
     print(f"   Vector type: Bipolar")
     print(f"   Binding: Multiply-Add-Permute")
-    print(f"   Good for multiple bindings\n")
+    print(f"   Good for multiple bindings")
+    # Test unbinding (approximate)
+    retrieved_x = map_arch.unbind(z, y)
+    print(f"   Unbind test: similarity(unbind(z,y), x) = {map_arch.similarity(retrieved_x, x):.3f}\n")
     
     # FHRR (Fourier HRR)
     print("3. Fourier HRR (FHRR):")
-    fhrr = create_architecture('fhrr', dimension=dimension)
-    p = fhrr.encode('P')
-    q = fhrr.encode('Q')
+    fhrr = FHRR(dimension=dimension)
+    p = fhrr.generate_vector()
+    q = fhrr.generate_vector()
     r = fhrr.bind(p, q)
     print(f"   Vector type: Complex")
     print(f"   Binding: Frequency domain convolution")
-    print(f"   Compatible with HRR\n")
+    print(f"   Compatible with HRR")
+    # Test unbinding
+    retrieved_p = fhrr.unbind(r, q)
+    print(f"   Unbind test: similarity(unbind(r,q), p) = {fhrr.similarity(retrieved_p, p):.3f}\n")
     
     # Sparse VSA
     print("4. Sparse VSA:")
-    sparse = create_architecture('sparse', dimension=dimension, sparsity=0.05)
-    s1 = sparse.encode('S1')
-    s2 = sparse.encode('S2')
+    sparse = SparseVSA(dimension=dimension, sparsity=0.95)
+    s1 = sparse.generate_vector()
+    s2 = sparse.generate_vector()
     s3 = sparse.bind(s1, s2)
     print(f"   Vector type: Ternary")
     print(f"   Very sparse representations")
-    print(f"   Memory efficient\n")
+    print(f"   Memory efficient")
+    print(f"   Sparsity of s1: {np.mean(s1 == 0):.3f}")
+    print(f"   Sparsity of bound s3: {np.mean(s3 == 0):.3f}\n")
 
 
 def main():
