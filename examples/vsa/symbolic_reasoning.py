@@ -14,7 +14,7 @@ This script demonstrates advanced symbolic reasoning capabilities using VSA:
 
 import numpy as np
 from typing import Dict, List, Tuple, Any
-from cognitive_computing.vsa import create_vsa, VSAConfig, create_architecture
+from cognitive_computing.vsa import create_vsa, BSC, MAP, FHRR
 
 
 class KnowledgeBase:
@@ -22,11 +22,12 @@ class KnowledgeBase:
     
     def __init__(self, dimension: int = 10000):
         """Initialize knowledge base with a VSA instance."""
-        self.vsa = create_vsa(VSAConfig(
+        self.vsa = create_vsa(
             dimension=dimension,
             vector_type='bipolar',
+            vsa_type='custom',
             binding_method='multiplication'
-        ))
+        )
         self.facts = {}
         self.rules = {}
         self.concepts = {}
@@ -34,7 +35,7 @@ class KnowledgeBase:
     def add_concept(self, name: str):
         """Add a concept to the knowledge base."""
         if name not in self.concepts:
-            self.concepts[name] = self.vsa.encode(name)
+            self.concepts[name] = self.vsa.generate_vector()
         return self.concepts[name]
     
     def add_fact(self, subject: str, predicate: str, object: str):
@@ -81,29 +82,36 @@ class KnowledgeBase:
 
 
 def demonstrate_analogical_reasoning():
-    """Demonstrate analogical reasoning: A:B :: C:?"""
+    """Demonstrate analogical reasoning: A:B :: C:?
+    
+    Note: Analogical reasoning with multiplication binding typically produces
+    low similarity scores because the transformation cannot be cleanly extracted.
+    Better results would be achieved with permutation-based or MAP-based binding.
+    """
     print("=== Analogical Reasoning Demo ===\n")
     
-    vsa = create_vsa(VSAConfig(
+    vsa = create_vsa(
         dimension=10000,
         vector_type='bipolar',
+        vsa_type='custom',
         binding_method='multiplication'
-    ))
+    )
     
     # Example 1: Classic word analogy
     print("1. Word Analogies:")
     
     # King:Queen :: Man:Woman
-    king = vsa.encode('king')
-    queen = vsa.encode('queen')
-    man = vsa.encode('man')
-    woman = vsa.encode('woman')
+    king = vsa.generate_vector()
+    queen = vsa.generate_vector()
+    man = vsa.generate_vector()
+    woman = vsa.generate_vector()
     
     # Learn the transformation
-    transform = vsa.bind(queen, vsa.inverse(king))
+    # For multiplication binding, we can unbind by binding again (element-wise multiplication is its own inverse)
+    transform = vsa.bind(queen, king)
     
     # Apply to man
-    result = vsa.bind(transform, man)
+    result = vsa.bind(transform, vsa.bind(man, king))
     similarity = vsa.similarity(result, woman)
     
     print(f"   King:Queen :: Man:? → Woman (similarity: {similarity:.3f})")
@@ -112,16 +120,17 @@ def demonstrate_analogical_reasoning():
     print("\n2. Semantic Relationships:")
     
     # Paris:France :: Tokyo:Japan
-    paris = vsa.encode('paris')
-    france = vsa.encode('france')
-    tokyo = vsa.encode('tokyo')
-    japan = vsa.encode('japan')
+    paris = vsa.generate_vector()
+    france = vsa.generate_vector()
+    tokyo = vsa.generate_vector()
+    japan = vsa.generate_vector()
     
     # Learn capital-country relationship
-    capital_relation = vsa.bind(france, vsa.inverse(paris))
+    # For multiplication binding, unbind by binding again
+    capital_relation = vsa.bind(france, paris)
     
     # Apply to Tokyo
-    result = vsa.bind(capital_relation, tokyo)
+    result = vsa.bind(capital_relation, vsa.bind(tokyo, paris))
     similarity = vsa.similarity(result, japan)
     
     print(f"   Paris:France :: Tokyo:? → Japan (similarity: {similarity:.3f})")
@@ -130,16 +139,17 @@ def demonstrate_analogical_reasoning():
     print("\n3. Property Transfer:")
     
     # Bird:Fly :: Fish:Swim
-    bird = vsa.encode('bird')
-    fly = vsa.encode('fly')
-    fish = vsa.encode('fish')
-    swim = vsa.encode('swim')
+    bird = vsa.generate_vector()
+    fly = vsa.generate_vector()
+    fish = vsa.generate_vector()
+    swim = vsa.generate_vector()
     
     # Learn action relationship
-    action_relation = vsa.bind(fly, vsa.inverse(bird))
+    # For multiplication binding, unbind by binding again
+    action_relation = vsa.bind(fly, bird)
     
     # Apply to fish
-    result = vsa.bind(action_relation, fish)
+    result = vsa.bind(action_relation, vsa.bind(fish, bird))
     similarity = vsa.similarity(result, swim)
     
     print(f"   Bird:Fly :: Fish:? → Swim (similarity: {similarity:.3f})")
@@ -148,20 +158,21 @@ def demonstrate_analogical_reasoning():
     print("\n4. Compositional Analogies:")
     
     # Create compositional structures
-    big = vsa.encode('big')
-    small = vsa.encode('small')
-    car = vsa.encode('car')
-    truck = vsa.encode('truck')
+    big = vsa.generate_vector()
+    small = vsa.generate_vector()
+    car = vsa.generate_vector()
+    truck = vsa.generate_vector()
     
     big_car = vsa.bind(big, car)
     small_car = vsa.bind(small, car)
     big_truck = vsa.bind(big, truck)
     
     # Learn size transformation
-    size_transform = vsa.bind(small_car, vsa.inverse(big_car))
+    # For multiplication binding, unbind by binding again
+    size_transform = vsa.bind(small_car, big_car)
     
     # Apply to big truck
-    result = vsa.bind(size_transform, big_truck)
+    result = vsa.bind(size_transform, vsa.bind(big_truck, big_car))
     expected = vsa.bind(small, truck)
     similarity = vsa.similarity(result, expected)
     
@@ -275,24 +286,27 @@ def demonstrate_logic_operations():
     """Demonstrate logical operations using VSA."""
     print("=== Logic Operations Demo ===\n")
     
-    vsa = create_vsa(VSAConfig(
+    vsa = create_vsa(
         dimension=10000,
         vector_type='bipolar',
+        vsa_type='custom',
         binding_method='multiplication'
-    ))
+    )
     
     # Example 1: Boolean logic with fuzzy values
     print("1. Fuzzy Logic Operations:")
     
     # Create truth values
-    true = vsa.encode('TRUE')
-    false = vsa.encode('FALSE')
-    maybe = vsa.bundle([true, false], weights=[0.5, 0.5])
+    true = vsa.generate_vector()
+    false = vsa.generate_vector()
+    # Create maybe as a weighted average
+    maybe = 0.5 * true + 0.5 * false
+    maybe = maybe / np.linalg.norm(maybe)  # Normalize
     
     # Propositions
-    sunny = vsa.encode('sunny')
-    warm = vsa.encode('warm')
-    beach = vsa.encode('beach')
+    sunny = vsa.generate_vector()
+    warm = vsa.generate_vector()
+    beach = vsa.generate_vector()
     
     # Create facts with truth values
     sunny_true = vsa.bind(sunny, true)
@@ -313,8 +327,8 @@ def demonstrate_logic_operations():
     print("\n2. Logical Implications (If-Then Rules):")
     
     # Rule: If sunny AND warm THEN go to beach
-    if_role = vsa.encode('IF')
-    then_role = vsa.encode('THEN')
+    if_role = vsa.generate_vector()
+    then_role = vsa.generate_vector()
     
     condition = vsa.bind(sunny, warm)
     consequence = beach
@@ -335,27 +349,28 @@ def demonstrate_logic_operations():
     print("\n3. Quantifiers (Universal/Existential):")
     
     # Concepts
-    all_role = vsa.encode('ALL')
-    some_role = vsa.encode('SOME')
-    birds = vsa.encode('birds')
-    can_fly = vsa.encode('can_fly')
-    penguins = vsa.encode('penguins')
-    cannot_fly = vsa.encode('cannot_fly')
+    all_role = vsa.generate_vector()
+    some_role = vsa.generate_vector()
+    birds = vsa.generate_vector()
+    can_fly = vsa.generate_vector()
+    penguins = vsa.generate_vector()
+    cannot_fly = vsa.generate_vector()
     
     # Universal: All birds can fly
     universal = vsa.bundle([
         vsa.bind(all_role, birds),
-        vsa.bind(vsa.encode('PROPERTY'), can_fly)
+        vsa.bind(vsa.generate_vector(), can_fly)
     ])
     
     # Exception: Some birds (penguins) cannot fly
     exception = vsa.bundle([
         vsa.bind(some_role, vsa.bind(birds, penguins)),
-        vsa.bind(vsa.encode('PROPERTY'), cannot_fly)
+        vsa.bind(vsa.generate_vector(), cannot_fly)
     ])
     
     # Combine with exception
-    knowledge = vsa.bundle([universal, exception], weights=[0.8, 0.2])
+    knowledge = 0.8 * universal + 0.2 * exception
+    knowledge = knowledge / np.linalg.norm(knowledge)  # Normalize
     
     print("   Knowledge representation includes both rule and exception\n")
 
@@ -471,7 +486,7 @@ def demonstrate_question_answering():
     for fact_key, fact_vec in kb.facts.items():
         if 'lives_in-New_York' in fact_key:
             resident, sim = kb.query('SUBJECT', fact_vec)
-            if sim > 0.7:
+            if sim > 0.4:  # Lower threshold for multiplication binding
                 ny_residents.append(resident)
     print(f"   A: {', '.join(ny_residents)}")
     
@@ -489,7 +504,7 @@ def demonstrate_question_answering():
     for fact_key, fact_vec in kb.facts.items():
         if 'occupation-doctor' in fact_key:
             person, sim = kb.query('SUBJECT', fact_vec)
-            if sim > 0.7:
+            if sim > 0.4:  # Lower threshold for multiplication binding
                 doctors.append(person)
     
     # Check which doctors live in NY
@@ -566,12 +581,12 @@ def demonstrate_rule_based_inference():
     # Verify inferences
     print("\n4. Verifying Inferences:")
     robin_fly = kb.facts.get('robin-can-fly')
-    if robin_fly:
+    if robin_fly is not None:
         obj, sim = kb.query('OBJECT', robin_fly)
         print(f"   - Robin can: {obj} (confidence: {sim:.3f})")
     
     dog_warm = kb.facts.get('dog-is-warm_blooded')
-    if dog_warm:
+    if dog_warm is not None:
         obj, sim = kb.query('OBJECT', dog_warm)
         print(f"   - Dog is: {obj} (confidence: {sim:.3f})\n")
 
@@ -580,28 +595,38 @@ def demonstrate_cognitive_operations():
     """Demonstrate cognitive operations like attention and memory."""
     print("=== Cognitive Operations Demo ===\n")
     
-    vsa = create_vsa(VSAConfig(
+    vsa = create_vsa(
         dimension=10000,
         vector_type='bipolar',
+        vsa_type='custom',
         binding_method='multiplication'
-    ))
+    )
     
     # Example 1: Attention mechanism
     print("1. Attention Mechanism:")
     
     # Create scene with multiple objects
+    color_role = vsa.generate_vector()
+    type_role = vsa.generate_vector()
+    red = vsa.generate_vector()
+    blue = vsa.generate_vector()
+    green = vsa.generate_vector()
+    car = vsa.generate_vector()
+    house = vsa.generate_vector()
+    tree = vsa.generate_vector()
+    
     objects = {
         'red_car': vsa.bundle([
-            vsa.bind(vsa.encode('COLOR'), vsa.encode('red')),
-            vsa.bind(vsa.encode('TYPE'), vsa.encode('car'))
+            vsa.bind(color_role, red),
+            vsa.bind(type_role, car)
         ]),
         'blue_house': vsa.bundle([
-            vsa.bind(vsa.encode('COLOR'), vsa.encode('blue')),
-            vsa.bind(vsa.encode('TYPE'), vsa.encode('house'))
+            vsa.bind(color_role, blue),
+            vsa.bind(type_role, house)
         ]),
         'green_tree': vsa.bundle([
-            vsa.bind(vsa.encode('COLOR'), vsa.encode('green')),
-            vsa.bind(vsa.encode('TYPE'), vsa.encode('tree'))
+            vsa.bind(color_role, green),
+            vsa.bind(type_role, tree)
         ])
     }
     
@@ -609,7 +634,7 @@ def demonstrate_cognitive_operations():
     scene = vsa.bundle(list(objects.values()))
     
     # Attention query: Find red objects
-    red_query = vsa.bind(vsa.encode('COLOR'), vsa.encode('red'))
+    red_query = vsa.bind(color_role, red)
     
     # Check each object
     print("   Looking for red objects:")
@@ -621,14 +646,14 @@ def demonstrate_cognitive_operations():
     print("\n2. Working Memory Operations:")
     
     # Create memory slots
-    slot1 = vsa.encode('SLOT1')
-    slot2 = vsa.encode('SLOT2')
-    slot3 = vsa.encode('SLOT3')
+    slot1 = vsa.generate_vector()
+    slot2 = vsa.generate_vector()
+    slot3 = vsa.generate_vector()
     
     # Store items in memory
-    item1 = vsa.encode('apple')
-    item2 = vsa.encode('banana')
-    item3 = vsa.encode('orange')
+    item1 = vsa.generate_vector()
+    item2 = vsa.generate_vector()
+    item3 = vsa.generate_vector()
     
     working_memory = vsa.bundle([
         vsa.bind(slot1, item1),
@@ -640,11 +665,10 @@ def demonstrate_cognitive_operations():
     print("   Working memory contents:")
     for i, slot in enumerate([slot1, slot2, slot3], 1):
         retrieved = vsa.unbind(working_memory, slot)
-        items = ['apple', 'banana', 'orange']
-        for item_name in items:
-            item_vec = vsa.encode(item_name)
+        items = [('apple', item1), ('banana', item2), ('orange', item3)]
+        for item_name, item_vec in items:
             sim = vsa.similarity(retrieved, item_vec)
-            if sim > 0.7:
+            if sim > 0.3:  # Lower threshold for multiplication binding
                 print(f"   - Slot {i}: {item_name} (sim: {sim:.3f})")
                 break
     
@@ -660,9 +684,19 @@ def demonstrate_cognitive_operations():
     
     # Build associations
     associations = {}
+    concept_vecs = {}
+    
+    # Generate vectors for all concepts
     for main_concept, related in concepts.items():
-        main_vec = vsa.encode(main_concept)
-        related_vecs = [vsa.encode(r) for r in related]
+        concept_vecs[main_concept] = vsa.generate_vector()
+        for r in related:
+            if r not in concept_vecs:
+                concept_vecs[r] = vsa.generate_vector()
+    
+    # Build associations
+    for main_concept, related in concepts.items():
+        main_vec = concept_vecs[main_concept]
+        related_vecs = [concept_vecs[r] for r in related]
         associations[main_concept] = vsa.bundle([
             vsa.bind(main_vec, r) for r in related_vecs
         ])
@@ -671,8 +705,8 @@ def demonstrate_cognitive_operations():
     prime = 'doctor'
     target = 'hospital'
     
-    prime_vec = vsa.encode(prime)
-    target_vec = vsa.encode(target)
+    prime_vec = concept_vecs[prime]
+    target_vec = concept_vecs[target]
     
     # Measure association strength
     association = associations[prime]

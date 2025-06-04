@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from typing import List, Dict, Any
 from cognitive_computing.vsa import (
     BinaryVector, BipolarVector, TernaryVector, ComplexVector, IntegerVector,
-    create_vsa, VSAConfig
+    generate_random_vector, create_vsa
 )
 
 
@@ -29,32 +29,32 @@ def demonstrate_binary_vectors():
     
     # Create binary vectors
     print("1. Vector Creation:")
-    vec1 = BinaryVector.random(dimension)
-    vec2 = BinaryVector.random(dimension)
-    vec_zero = BinaryVector.zeros(dimension)
-    vec_one = BinaryVector.ones(dimension)
+    vec1 = generate_random_vector(dimension, BinaryVector).data
+    vec2 = generate_random_vector(dimension, BinaryVector).data
+    vec_zero = np.zeros(dimension, dtype=np.uint8)
+    vec_one = np.ones(dimension, dtype=np.uint8)
     
-    print(f"   Random vector sample: {vec1.data[:20]}")
-    print(f"   Density (% of 1s): {np.mean(vec1.data):.3f}")
-    print(f"   Zero vector sum: {np.sum(vec_zero.data)}")
-    print(f"   One vector sum: {np.sum(vec_one.data)}\n")
+    print(f"   Random vector sample: {vec1[:20]}")
+    print(f"   Density (% of 1s): {np.mean(vec1):.3f}")
+    print(f"   Zero vector sum: {np.sum(vec_zero)}")
+    print(f"   One vector sum: {np.sum(vec_one)}\n")
     
     # Binary operations
     print("2. Binary Operations:")
-    vec_xor = vec1.bind(vec2)  # XOR operation
-    vec_and = BinaryVector(vec1.data & vec2.data)
-    vec_or = BinaryVector(vec1.data | vec2.data)
-    vec_not = BinaryVector(1 - vec1.data)
+    vec_xor = vec1 ^ vec2  # XOR operation
+    vec_and = vec1 & vec2
+    vec_or = vec1 | vec2
+    vec_not = 1 - vec1
     
-    print(f"   XOR density: {np.mean(vec_xor.data):.3f}")
-    print(f"   AND density: {np.mean(vec_and.data):.3f}")
-    print(f"   OR density: {np.mean(vec_or.data):.3f}")
-    print(f"   NOT density: {np.mean(vec_not.data):.3f}\n")
+    print(f"   XOR density: {np.mean(vec_xor):.3f}")
+    print(f"   AND density: {np.mean(vec_and):.3f}")
+    print(f"   OR density: {np.mean(vec_or):.3f}")
+    print(f"   NOT density: {np.mean(vec_not):.3f}\n")
     
     # Distance metrics
     print("3. Distance Metrics:")
-    hamming_dist = np.sum(vec1.data != vec2.data)
-    jaccard_sim = np.sum(vec1.data & vec2.data) / np.sum(vec1.data | vec2.data)
+    hamming_dist = np.sum(vec1 != vec2)
+    jaccard_sim = np.sum(vec1 & vec2) / np.sum(vec1 | vec2)
     
     print(f"   Hamming distance: {hamming_dist}")
     print(f"   Jaccard similarity: {jaccard_sim:.3f}")
@@ -62,8 +62,8 @@ def demonstrate_binary_vectors():
     
     # Properties
     print("4. Key Properties:")
-    print(f"   Self XOR (should be zero): {np.sum(vec1.bind(vec1).data)}")
-    print(f"   Double XOR recovery: {np.array_equal(vec1.bind(vec2).bind(vec2).data, vec1.data)}")
+    print(f"   Self XOR (should be zero): {np.sum(vec1 ^ vec1)}")
+    print(f"   Double XOR recovery: {np.array_equal((vec1 ^ vec2) ^ vec2, vec1)}")
     print(f"   Memory efficiency: {dimension} bits = {dimension/8:.0f} bytes\n")
     
     # Use cases
@@ -82,30 +82,30 @@ def demonstrate_bipolar_vectors():
     
     # Create bipolar vectors
     print("1. Vector Creation:")
-    vec1 = BipolarVector.random(dimension)
-    vec2 = BipolarVector.random(dimension)
-    vec_pos = BipolarVector.ones(dimension)
-    vec_neg = BipolarVector(np.full(dimension, -1))
+    vec1 = generate_random_vector(dimension, BipolarVector).data
+    vec2 = generate_random_vector(dimension, BipolarVector).data
+    vec_pos = np.ones(dimension)
+    vec_neg = np.full(dimension, -1.0)
     
-    print(f"   Random vector sample: {vec1.data[:20]}")
-    print(f"   Mean value: {np.mean(vec1.data):.3f} (should be ~0)")
-    print(f"   Standard deviation: {np.std(vec1.data):.3f}")
-    print(f"   Norm: {np.linalg.norm(vec1.data):.3f}\n")
+    print(f"   Random vector sample: {vec1[:20]}")
+    print(f"   Mean value: {np.mean(vec1):.3f} (should be ~0)")
+    print(f"   Standard deviation: {np.std(vec1):.3f}")
+    print(f"   Norm: {np.linalg.norm(vec1):.3f}\n")
     
     # Arithmetic operations
     print("2. Arithmetic Operations:")
-    vec_mult = BipolarVector(vec1.data * vec2.data)
-    vec_add = BipolarVector(np.sign(vec1.data + vec2.data))
-    vec_inv = BipolarVector(-vec1.data)
+    vec_mult = vec1 * vec2
+    vec_add = np.sign(vec1 + vec2)
+    vec_inv = -vec1
     
-    print(f"   Multiplication similarity to vec1: {vec1.similarity(vec_mult):.3f}")
-    print(f"   Addition (majority) similarity to vec1: {vec1.similarity(vec_add):.3f}")
-    print(f"   Inverse correlation: {np.dot(vec1.data, vec_inv.data) / dimension:.3f}\n")
+    print(f"   Multiplication similarity to vec1: {np.dot(vec1, vec_mult) / dimension:.3f}")
+    print(f"   Addition (majority) similarity to vec1: {np.dot(vec1, vec_add) / dimension:.3f}")
+    print(f"   Inverse correlation: {np.dot(vec1, vec_inv) / dimension:.3f}\n")
     
     # Statistical properties
     print("3. Statistical Properties:")
-    dot_product = np.dot(vec1.data, vec2.data) / dimension
-    correlation = np.corrcoef(vec1.data, vec2.data)[0, 1]
+    dot_product = np.dot(vec1, vec2) / dimension
+    correlation = np.corrcoef(vec1, vec2)[0, 1]
     
     print(f"   Dot product (normalized): {dot_product:.3f}")
     print(f"   Correlation coefficient: {correlation:.3f}")
@@ -113,11 +113,11 @@ def demonstrate_bipolar_vectors():
     
     # Bundling operations
     print("4. Bundling (Superposition):")
-    vectors = [BipolarVector.random(dimension) for _ in range(5)]
-    bundle = BipolarVector(np.sign(np.sum([v.data for v in vectors], axis=0)))
+    vectors = [generate_random_vector(dimension, BipolarVector).data for _ in range(5)]
+    bundle = np.sign(np.sum(vectors, axis=0))
     
     for i, vec in enumerate(vectors):
-        sim = bundle.similarity(vec)
+        sim = np.dot(bundle, vec) / dimension
         print(f"   Bundle similarity to vector {i}: {sim:.3f}")
     print()
     
@@ -140,42 +140,43 @@ def demonstrate_ternary_vectors():
     sparsities = [0.1, 0.5, 0.9]
     
     for sparsity in sparsities:
-        vec = TernaryVector.random(dimension, sparsity=sparsity)
-        active = np.sum(vec.data != 0)
+        # Generate ternary vector with sparsity (probability of zeros)
+        vec = np.random.choice([-1, 0, 1], size=dimension, p=[(1-sparsity)/2, sparsity, (1-sparsity)/2])
+        active = np.sum(vec != 0)
         print(f"   Sparsity {sparsity}: {active} active elements ({active/dimension:.1%})")
-        print(f"     Positive: {np.sum(vec.data == 1)}, Negative: {np.sum(vec.data == -1)}")
+        print(f"     Positive: {np.sum(vec == 1)}, Negative: {np.sum(vec == -1)}")
     print()
     
     # Sparse operations
     print("2. Sparse Operations:")
-    vec1 = TernaryVector.random(dimension, sparsity=0.1)
-    vec2 = TernaryVector.random(dimension, sparsity=0.1)
+    vec1 = np.random.choice([-1, 0, 1], size=dimension, p=[0.45, 0.1, 0.45])
+    vec2 = np.random.choice([-1, 0, 1], size=dimension, p=[0.45, 0.1, 0.45])
     
     # Multiplication (preserves sparsity)
-    vec_mult = TernaryVector(vec1.data * vec2.data)
-    active_mult = np.sum(vec_mult.data != 0)
+    vec_mult = vec1 * vec2
+    active_mult = np.sum(vec_mult != 0)
     
-    print(f"   Vec1 active: {np.sum(vec1.data != 0)}")
-    print(f"   Vec2 active: {np.sum(vec2.data != 0)}")
+    print(f"   Vec1 active: {np.sum(vec1 != 0)}")
+    print(f"   Vec2 active: {np.sum(vec2 != 0)}")
     print(f"   Product active: {active_mult} (intersection)\n")
     
     # Bundling with threshold
     print("3. Threshold Bundling:")
-    vectors = [TernaryVector.random(dimension, sparsity=0.1) for _ in range(10)]
-    sum_vec = np.sum([v.data for v in vectors], axis=0)
+    vectors = [np.random.choice([-1, 0, 1], size=dimension, p=[0.45, 0.1, 0.45]) for _ in range(10)]
+    sum_vec = np.sum(vectors, axis=0)
     
     thresholds = [1, 2, 3]
     for thresh in thresholds:
-        bundled = TernaryVector(np.where(sum_vec >= thresh, 1, 
-                                       np.where(sum_vec <= -thresh, -1, 0)))
-        active = np.sum(bundled.data != 0)
+        bundled = np.where(sum_vec >= thresh, 1, 
+                                       np.where(sum_vec <= -thresh, -1, 0))
+        active = np.sum(bundled != 0)
         print(f"   Threshold {thresh}: {active} active elements")
     print()
     
     # Memory efficiency
     print("4. Memory Efficiency:")
     dense_size = dimension * 8  # 64-bit float
-    sparse_size = np.sum(vec1.data != 0) * 2 * 4  # position + value (32-bit each)
+    sparse_size = np.sum(vec1 != 0) * 2 * 4  # position + value (32-bit each)
     
     print(f"   Dense storage: {dense_size} bytes")
     print(f"   Sparse storage: ~{sparse_size} bytes")
@@ -197,17 +198,20 @@ def demonstrate_complex_vectors():
     
     # Create complex vectors
     print("1. Vector Creation:")
-    vec1 = ComplexVector.random(dimension)
-    vec2 = ComplexVector.random(dimension)
+    # Generate complex vectors with unit magnitude
+    phases1 = np.random.uniform(-np.pi, np.pi, dimension)
+    phases2 = np.random.uniform(-np.pi, np.pi, dimension)
+    vec1 = np.exp(1j * phases1)
+    vec2 = np.exp(1j * phases2)
     
-    print(f"   Sample values: {vec1.data[:5]}")
-    print(f"   Magnitudes: {np.abs(vec1.data[:5])}")
-    print(f"   All unit magnitude: {np.allclose(np.abs(vec1.data), 1.0)}\n")
+    print(f"   Sample values: {vec1[:5]}")
+    print(f"   Magnitudes: {np.abs(vec1[:5])}")
+    print(f"   All unit magnitude: {np.allclose(np.abs(vec1), 1.0)}\n")
     
     # Phase operations
     print("2. Phase Operations:")
-    phases1 = np.angle(vec1.data)
-    phases2 = np.angle(vec2.data)
+    phases1 = np.angle(vec1)
+    phases2 = np.angle(vec2)
     
     print(f"   Phase range: [{np.min(phases1):.3f}, {np.max(phases1):.3f}]")
     print(f"   Phase mean: {np.mean(phases1):.3f}")
@@ -215,27 +219,27 @@ def demonstrate_complex_vectors():
     
     # Complex binding (element-wise multiplication)
     print("3. Complex Binding:")
-    vec_bound = ComplexVector(vec1.data * vec2.data)
-    vec_unbound = ComplexVector(vec_bound.data * np.conj(vec2.data))
+    vec_bound = vec1 * vec2
+    vec_unbound = vec_bound * np.conj(vec2)
     
-    similarity = np.real(np.vdot(vec_unbound.data, vec1.data)) / dimension
+    similarity = np.real(np.vdot(vec_unbound, vec1)) / dimension
     print(f"   Binding: rotation by phase of vec2")
     print(f"   Unbinding similarity: {similarity:.3f}")
     print(f"   Phase addition property verified\n")
     
     # Fourier properties
     print("4. Fourier Transform Properties:")
-    fft_vec = np.fft.fft(vec1.data)
+    fft_vec = np.fft.fft(vec1)
     fft_magnitude = np.abs(fft_vec)
     
     print(f"   FFT magnitude mean: {np.mean(fft_magnitude):.3f}")
     print(f"   FFT magnitude std: {np.std(fft_magnitude):.3f}")
-    print(f"   Parseval's theorem check: {np.allclose(np.sum(np.abs(vec1.data)**2), np.sum(np.abs(fft_vec)**2)/dimension)}\n")
+    print(f"   Parseval's theorem check: {np.allclose(np.sum(np.abs(vec1)**2), np.sum(np.abs(fft_vec)**2)/dimension)}\n")
     
     # Holographic properties
     print("5. Holographic Properties:")
     # Convolution in time = multiplication in frequency
-    vec_conv = np.fft.ifft(np.fft.fft(vec1.data) * np.fft.fft(vec2.data))
+    vec_conv = np.fft.ifft(np.fft.fft(vec1) * np.fft.fft(vec2))
     vec_conv_normalized = vec_conv / np.abs(vec_conv)
     
     print(f"   Convolution preserves unit magnitude (after normalization)")
@@ -258,30 +262,30 @@ def demonstrate_integer_vectors():
     
     for modulus in moduli:
         print(f"1. Integer Vectors (mod {modulus}):")
-        vec1 = IntegerVector.random(dimension, modulus=modulus)
-        vec2 = IntegerVector.random(dimension, modulus=modulus)
+        vec1 = np.random.randint(0, modulus, dimension, dtype=np.int32)
+        vec2 = np.random.randint(0, modulus, dimension, dtype=np.int32)
         
         print(f"   Value range: [0, {modulus-1}]")
-        print(f"   Sample values: {vec1.data[:20]}")
-        print(f"   Mean value: {np.mean(vec1.data):.3f} (expected: {(modulus-1)/2:.3f})")
+        print(f"   Sample values: {vec1[:20]}")
+        print(f"   Mean value: {np.mean(vec1):.3f} (expected: {(modulus-1)/2:.3f})")
         
         # Modular operations
-        vec_add = IntegerVector((vec1.data + vec2.data) % modulus, modulus=modulus)
-        vec_mult = IntegerVector((vec1.data * vec2.data) % modulus, modulus=modulus)
-        vec_inv = IntegerVector((modulus - vec1.data) % modulus, modulus=modulus)
+        vec_add = (vec1 + vec2) % modulus
+        vec_mult = (vec1 * vec2) % modulus
+        vec_inv = (modulus - vec1) % modulus
         
         print(f"   Addition mod {modulus}: preserves distribution")
-        print(f"   Self + Inverse = 0 (mod {modulus}): {np.all((vec1.data + vec_inv.data) % modulus == 0)}")
+        print(f"   Self + Inverse = 0 (mod {modulus}): {np.all((vec1 + vec_inv) % modulus == 0)}")
         print()
     
     # Cyclic properties
     print("2. Cyclic Group Properties:")
     modulus = 16
-    vec = IntegerVector.random(dimension, modulus=modulus)
+    vec = np.random.randint(0, modulus, dimension, dtype=np.int32)
     generator = 3  # Generator for multiplicative group
     
     powers = []
-    current = vec.data.copy()
+    current = vec.copy()
     for i in range(4):
         powers.append(np.mean(current))
         current = (current * generator) % modulus
@@ -306,11 +310,11 @@ def compare_vector_types():
     
     # Create vectors of each type
     vectors = {
-        'Binary': BinaryVector.random(dimension),
-        'Bipolar': BipolarVector.random(dimension),
-        'Ternary': TernaryVector.random(dimension, sparsity=0.1),
-        'Complex': ComplexVector.random(dimension),
-        'Integer': IntegerVector.random(dimension, modulus=256)
+        'Binary': generate_random_vector(dimension, BinaryVector).data,
+        'Bipolar': generate_random_vector(dimension, BipolarVector).data,
+        'Ternary': np.random.choice([-1, 0, 1], size=dimension, p=[0.45, 0.1, 0.45]),
+        'Complex': np.exp(1j * np.random.uniform(-np.pi, np.pi, dimension)),
+        'Integer': np.random.randint(0, 256, dimension, dtype=np.int32)
     }
     
     # Compare properties
@@ -321,7 +325,7 @@ def compare_vector_types():
         elif name == 'Bipolar':
             size = dimension * 1  # int8
         elif name == 'Ternary':
-            active = np.sum(vec.data != 0)
+            active = np.sum(vec != 0)
             size = active * 8  # sparse representation
         elif name == 'Complex':
             size = dimension * 16  # 2 * float64
@@ -363,44 +367,44 @@ def visualize_vector_distributions():
         axes = axes.flatten()
         
         # Binary distribution
-        vec_binary = BinaryVector.random(dimension)
-        axes[0].hist(vec_binary.data, bins=2, alpha=0.7, color='blue')
+        vec_binary = generate_random_vector(dimension, BinaryVector).data
+        axes[0].hist(vec_binary, bins=2, alpha=0.7, color='blue')
         axes[0].set_title('Binary Vector Distribution')
         axes[0].set_xlabel('Value')
         axes[0].set_ylabel('Count')
         
         # Bipolar distribution
-        vec_bipolar = BipolarVector.random(dimension)
-        axes[1].hist(vec_bipolar.data, bins=2, alpha=0.7, color='green')
+        vec_bipolar = generate_random_vector(dimension, BipolarVector).data
+        axes[1].hist(vec_bipolar, bins=2, alpha=0.7, color='green')
         axes[1].set_title('Bipolar Vector Distribution')
         axes[1].set_xlabel('Value')
         
         # Ternary distribution
-        vec_ternary = TernaryVector.random(dimension, sparsity=0.1)
-        axes[2].hist(vec_ternary.data, bins=3, alpha=0.7, color='red')
+        vec_ternary = np.random.choice([-1, 0, 1], size=dimension, p=[0.45, 0.1, 0.45])
+        axes[2].hist(vec_ternary, bins=3, alpha=0.7, color='red')
         axes[2].set_title('Ternary Vector Distribution (90% sparse)')
         axes[2].set_xlabel('Value')
         
         # Complex phase distribution
-        vec_complex = ComplexVector.random(dimension)
-        phases = np.angle(vec_complex.data)
+        vec_complex = np.exp(1j * np.random.uniform(-np.pi, np.pi, dimension))
+        phases = np.angle(vec_complex)
         axes[3].hist(phases, bins=50, alpha=0.7, color='purple')
         axes[3].set_title('Complex Vector Phase Distribution')
         axes[3].set_xlabel('Phase (radians)')
         
         # Integer distribution
-        vec_integer = IntegerVector.random(dimension, modulus=16)
-        axes[4].hist(vec_integer.data, bins=16, alpha=0.7, color='orange')
+        vec_integer = np.random.randint(0, 16, dimension, dtype=np.int32)
+        axes[4].hist(vec_integer, bins=16, alpha=0.7, color='orange')
         axes[4].set_title('Integer Vector Distribution (mod 16)')
         axes[4].set_xlabel('Value')
         
         # Comparison of densities
         densities = {
-            'Binary': np.mean(vec_binary.data),
-            'Bipolar +1': np.mean(vec_bipolar.data == 1),
-            'Ternary non-zero': np.mean(vec_ternary.data != 0),
+            'Binary': np.mean(vec_binary),
+            'Bipolar +1': np.mean(vec_bipolar == 1),
+            'Ternary non-zero': np.mean(vec_ternary != 0),
             'Complex (N/A)': 1.0,
-            'Integer > 8': np.mean(vec_integer.data > 8)
+            'Integer > 8': np.mean(vec_integer > 8)
         }
         
         axes[5].bar(range(len(densities)), list(densities.values()), 

@@ -15,7 +15,7 @@ import numpy as np
 import time
 from typing import List, Dict, Tuple
 import matplotlib.pyplot as plt
-from cognitive_computing.vsa import create_vsa, VSAConfig
+from cognitive_computing.vsa import create_vsa, BSC, MAP, FHRR
 
 
 def measure_binding_performance(dimension: int = 1000, num_operations: int = 1000) -> Dict[str, Dict[str, float]]:
@@ -26,26 +26,25 @@ def measure_binding_performance(dimension: int = 1000, num_operations: int = 100
     
     # Test configurations
     configs = [
-        ('XOR (Binary)', 'binary', 'xor'),
-        ('Multiplication (Bipolar)', 'bipolar', 'multiplication'),
-        ('Convolution (Complex)', 'complex', 'convolution'),
-        ('MAP (Bipolar)', 'bipolar', 'map'),
-        ('Permutation (Bipolar)', 'bipolar', 'permutation')
+        ('XOR (Binary)', 'binary', 'bsc', None),
+        ('Multiplication (Bipolar)', 'bipolar', 'custom', 'multiplication'),
+        ('Convolution (Complex)', 'complex', 'fhrr', None),
+        ('MAP (Bipolar)', 'bipolar', 'map', None),
+        ('Permutation (Bipolar)', 'bipolar', 'custom', 'permutation')
     ]
     
-    for name, vector_type, binding_method in configs:
+    for name, vector_type, vsa_type, binding_method in configs:
         print(f"Testing {name}...")
         
         # Create VSA instance
-        vsa = create_vsa(VSAConfig(
-            dimension=dimension,
-            vector_type=vector_type,
-            binding_method=binding_method
-        ))
+        kwargs = {'dimension': dimension, 'vector_type': vector_type, 'vsa_type': vsa_type}
+        if binding_method:
+            kwargs['binding_method'] = binding_method
+        vsa = create_vsa(**kwargs)
         
         # Generate test vectors
-        vectors_a = [vsa.encode(f'a_{i}') for i in range(num_operations)]
-        vectors_b = [vsa.encode(f'b_{i}') for i in range(num_operations)]
+        vectors_a = [vsa.generate_vector() for i in range(num_operations)]
+        vectors_b = [vsa.generate_vector() for i in range(num_operations)]
         
         # Measure binding time
         start_time = time.time()
@@ -79,27 +78,32 @@ def test_binding_properties(dimension: int = 1000) -> Dict[str, Dict[str, bool]]
     properties = {}
     
     configs = [
-        ('XOR', 'binary', 'xor'),
-        ('Multiplication', 'bipolar', 'multiplication'),
-        ('Convolution', 'complex', 'convolution'),
-        ('MAP', 'bipolar', 'map'),
-        ('Permutation', 'bipolar', 'permutation')
+        ('XOR', 'binary', 'bsc', None),
+        ('Multiplication', 'bipolar', 'custom', 'multiplication'),
+        ('Convolution', 'complex', 'fhrr', None),
+        ('MAP', 'bipolar', 'map', None),
+        ('Permutation', 'bipolar', 'custom', 'permutation')
     ]
     
-    for name, vector_type, binding_method in configs:
+    for name, vector_type, vsa_type, binding_method in configs:
         print(f"Testing {name} properties...")
         
-        vsa = create_vsa(VSAConfig(
-            dimension=dimension,
-            vector_type=vector_type,
-            binding_method=binding_method
-        ))
+        kwargs = {'dimension': dimension, 'vector_type': vector_type, 'vsa_type': vsa_type}
+        if binding_method:
+            kwargs['binding_method'] = binding_method
+        vsa = create_vsa(**kwargs)
         
         # Generate test vectors
-        a = vsa.encode('a')
-        b = vsa.encode('b')
-        c = vsa.encode('c')
-        identity = vsa.identity()
+        a = vsa.generate_vector()
+        b = vsa.generate_vector()
+        c = vsa.generate_vector()
+        # Note: VSA doesn't have identity() method - use appropriate identity for binding type
+        if name == 'XOR':
+            identity = np.zeros(dimension, dtype=np.uint8)  # All zeros for XOR
+        elif name in ['Multiplication', 'MAP']:
+            identity = np.ones(dimension)  # All ones for multiplication
+        else:
+            identity = vsa.generate_vector()  # No clear identity for other operations
         
         # Test commutativity: a ⊗ b = b ⊗ a
         ab = vsa.bind(a, b)
@@ -152,24 +156,23 @@ def test_noise_tolerance(dimension: int = 1000, noise_levels: List[float] = None
     results = {}
     
     configs = [
-        ('XOR', 'binary', 'xor'),
-        ('Multiplication', 'bipolar', 'multiplication'),
-        ('Convolution', 'complex', 'convolution'),
-        ('MAP', 'bipolar', 'map')
+        ('XOR', 'binary', 'bsc', None),
+        ('Multiplication', 'bipolar', 'custom', 'multiplication'),
+        ('Convolution', 'complex', 'fhrr', None),
+        ('MAP', 'bipolar', 'map', None)
     ]
     
-    for name, vector_type, binding_method in configs:
+    for name, vector_type, vsa_type, binding_method in configs:
         print(f"Testing {name} noise tolerance...")
         
-        vsa = create_vsa(VSAConfig(
-            dimension=dimension,
-            vector_type=vector_type,
-            binding_method=binding_method
-        ))
+        kwargs = {'dimension': dimension, 'vector_type': vector_type, 'vsa_type': vsa_type}
+        if binding_method:
+            kwargs['binding_method'] = binding_method
+        vsa = create_vsa(**kwargs)
         
         # Create test vectors
-        key = vsa.encode('key')
-        value = vsa.encode('value')
+        key = vsa.generate_vector()
+        value = vsa.generate_vector()
         bound = vsa.bind(key, value)
         
         similarities = []
@@ -179,21 +182,18 @@ def test_noise_tolerance(dimension: int = 1000, noise_levels: List[float] = None
             if vector_type == 'binary':
                 # Flip bits with probability noise_level
                 noise_mask = np.random.random(dimension) < noise_level
-                noisy_data = bound.data.copy()
-                noisy_data[noise_mask] = 1 - noisy_data[noise_mask]
-                noisy_bound = type(bound)(noisy_data)
+                noisy_bound = bound.copy()
+                noisy_bound[noise_mask] = 1 - noisy_bound[noise_mask]
             elif vector_type == 'bipolar':
                 # Add Gaussian noise
                 noise = np.random.normal(0, noise_level, dimension)
-                noisy_data = bound.data + noise
-                noisy_bound = type(bound)(noisy_data)
+                noisy_bound = bound + noise
             elif vector_type == 'complex':
                 # Add complex noise
                 noise = np.random.normal(0, noise_level, dimension) + 1j * np.random.normal(0, noise_level, dimension)
-                noisy_data = bound.data + noise
+                noisy_bound = bound + noise
                 # Renormalize
-                noisy_data = noisy_data / np.abs(noisy_data)
-                noisy_bound = type(bound)(noisy_data)
+                noisy_bound = noisy_bound / np.abs(noisy_bound)
             else:
                 noisy_bound = bound  # Skip noise for other types
             
@@ -215,26 +215,25 @@ def test_binding_capacity(dimension: int = 1000, max_pairs: int = 20) -> Dict[st
     results = {}
     
     configs = [
-        ('XOR', 'binary', 'xor'),
-        ('Multiplication', 'bipolar', 'multiplication'),
-        ('MAP', 'bipolar', 'map')
+        ('XOR', 'binary', 'bsc', None),
+        ('Multiplication', 'bipolar', 'custom', 'multiplication'),
+        ('MAP', 'bipolar', 'map', None)
     ]
     
-    for name, vector_type, binding_method in configs:
+    for name, vector_type, vsa_type, binding_method in configs:
         print(f"Testing {name} capacity...")
         
-        vsa = create_vsa(VSAConfig(
-            dimension=dimension,
-            vector_type=vector_type,
-            binding_method=binding_method
-        ))
+        kwargs = {'dimension': dimension, 'vector_type': vector_type, 'vsa_type': vsa_type}
+        if binding_method:
+            kwargs['binding_method'] = binding_method
+        vsa = create_vsa(**kwargs)
         
         similarities = []
         
         for num_pairs in range(1, max_pairs + 1):
             # Create multiple key-value pairs
-            keys = [vsa.encode(f'key_{i}') for i in range(num_pairs)]
-            values = [vsa.encode(f'value_{i}') for i in range(num_pairs)]
+            keys = [vsa.generate_vector() for i in range(num_pairs)]
+            values = [vsa.generate_vector() for i in range(num_pairs)]
             
             # Bind all pairs and bundle
             bound_pairs = [vsa.bind(k, v) for k, v in zip(keys, values)]
@@ -265,15 +264,15 @@ def demonstrate_use_cases():
     
     # 1. XOR for Binary Classification
     print("1. XOR Binding - Binary Feature Binding:")
-    vsa_xor = create_vsa(VSAConfig(
+    vsa_xor = create_vsa(
         dimension=dimension,
         vector_type='binary',
-        binding_method='xor'
-    ))
+        vsa_type='bsc'
+    )
     
     # Bind binary features
-    has_fur = vsa_xor.encode('has_fur')
-    mammal = vsa_xor.encode('mammal')
+    has_fur = vsa_xor.generate_vector()
+    mammal = vsa_xor.generate_vector()
     furry_mammal = vsa_xor.bind(has_fur, mammal)
     
     # XOR is self-inverse
@@ -283,36 +282,41 @@ def demonstrate_use_cases():
     
     # 2. Multiplication for Continuous Values
     print("2. Multiplication Binding - Weighted Combinations:")
-    vsa_mult = create_vsa(VSAConfig(
+    vsa_mult = create_vsa(
         dimension=dimension,
         vector_type='bipolar',
+        vsa_type='custom',
         binding_method='multiplication'
-    ))
+    )
     
     # Combine features with weights
-    feature1 = vsa_mult.encode('temperature')
-    feature2 = vsa_mult.encode('humidity')
+    feature1 = vsa_mult.generate_vector()
+    feature2 = vsa_mult.generate_vector()
     weight1 = 0.7
     weight2 = 0.3
     
+    # Create weight vectors
+    weight_vec1 = vsa_mult.generate_vector()
+    weight_vec2 = vsa_mult.generate_vector()
+    
     weighted_combo = vsa_mult.bundle([
-        vsa_mult.bind(feature1, vsa_mult.encode(f'w_{weight1}')),
-        vsa_mult.bind(feature2, vsa_mult.encode(f'w_{weight2}'))
-    ])
+        vsa_mult.bind(feature1, weight_vec1),
+        vsa_mult.bind(feature2, weight_vec2)
+    ], weights=[weight1, weight2])
     print(f"   Use case: Weighted feature combinations, neural network emulation\n")
     
     # 3. Convolution for Sequential Data
     print("3. Convolution Binding - Sequential Processing:")
-    vsa_conv = create_vsa(VSAConfig(
+    vsa_conv = create_vsa(
         dimension=dimension,
         vector_type='complex',
-        binding_method='convolution'
-    ))
+        vsa_type='fhrr'
+    )
     
     # Encode sequence
     words = ['the', 'quick', 'brown', 'fox']
-    positions = [vsa_conv.encode(f'pos_{i}') for i in range(len(words))]
-    word_vecs = [vsa_conv.encode(w) for w in words]
+    positions = [vsa_conv.generate_vector() for i in range(len(words))]
+    word_vecs = [vsa_conv.generate_vector() for w in words]
     
     sequence = vsa_conv.bundle([
         vsa_conv.bind(pos, word) for pos, word in zip(positions, word_vecs)
@@ -325,20 +329,20 @@ def demonstrate_use_cases():
     
     # 4. MAP for Robust Binding
     print("4. MAP Binding - Noise-Robust Combinations:")
-    vsa_map = create_vsa(VSAConfig(
+    vsa_map = create_vsa(
         dimension=dimension,
         vector_type='bipolar',
-        binding_method='map'
-    ))
+        vsa_type='map'
+    )
     
     # Multiple bindings with MAP
-    role1 = vsa_map.encode('subject')
-    role2 = vsa_map.encode('verb')
-    role3 = vsa_map.encode('object')
+    role1 = vsa_map.generate_vector()
+    role2 = vsa_map.generate_vector()
+    role3 = vsa_map.generate_vector()
     
-    filler1 = vsa_map.encode('cat')
-    filler2 = vsa_map.encode('chases')
-    filler3 = vsa_map.encode('mouse')
+    filler1 = vsa_map.generate_vector()
+    filler2 = vsa_map.generate_vector()
+    filler3 = vsa_map.generate_vector()
     
     sentence = vsa_map.bundle([
         vsa_map.bind(role1, filler1),
@@ -351,19 +355,20 @@ def demonstrate_use_cases():
     
     # 5. Permutation for Order-Sensitive Data
     print("5. Permutation Binding - Order-Preserving Operations:")
-    vsa_perm = create_vsa(VSAConfig(
+    vsa_perm = create_vsa(
         dimension=dimension,
         vector_type='bipolar',
+        vsa_type='custom',
         binding_method='permutation'
-    ))
+    )
     
     # Encode ordered list
     items = ['first', 'second', 'third']
-    item_vecs = [vsa_perm.encode(item) for item in items]
+    item_vecs = [vsa_perm.generate_vector() for item in items]
     
     # Use permutation to encode order
     ordered_list = vsa_perm.bundle([
-        vsa_perm.permute(vec, i) for i, vec in enumerate(item_vecs)
+        vsa_perm.permute(vec, shift=i) for i, vec in enumerate(item_vecs)
     ])
     
     print(f"   Permutation preserves order information")
