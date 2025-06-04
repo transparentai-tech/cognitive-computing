@@ -1,0 +1,29 @@
+"""
+Semantic Pointer Architecture (SPA) implementation.
+
+SPA provides a cognitive architecture that extends Holographic Reduced 
+Representations (HRR) with structured control flow, action selection, 
+and neural implementation principles.
+"""
+
+# Version will be imported when we have core components
+__version__ = "0.1.0"
+
+# Core imports
+from .core import (
+    SPAConfig,
+    SemanticPointer,
+    Vocabulary,
+    SPA,
+    create_spa,
+    create_vocabulary,
+)
+
+__all__ = [
+    "SPAConfig",
+    "SemanticPointer",
+    "Vocabulary", 
+    "SPA",
+    "create_spa",
+    "create_vocabulary",
+]
