@@ -56,19 +56,21 @@ def one_shot_classification_demo():
     print("=== One-Shot Classification Demo ===\n")
     
     # Create encoder for continuous values
+    # Using thermometer encoding with binary vectors for better one-shot learning
     encoder = ScalarEncoder(
-        dimension=1000,
+        dimension=5000,  # Larger dimension for better separation
         min_value=0.0,
         max_value=10.0,
-        n_levels=20,
-        method="thermometer"
+        n_levels=100,  # More levels for finer granularity
+        method="thermometer",
+        hypervector_type="binary"
     )
     
     # Create classifier
     classifier = OneShotClassifier(
-        dimension=1000,
+        dimension=5000,
         encoder=encoder,
-        similarity_threshold=0.3
+        similarity_threshold=0.4  # Threshold for binary vectors
     )
     
     # Generate data
@@ -89,12 +91,12 @@ def one_shot_classification_demo():
     print(f"Training with {len(X_oneshot)} examples (one per class)")
     classifier.train(X_oneshot, y_oneshot)
     
-    # Test
-    train_score = classifier.score(X_train, y_train)
-    test_score = classifier.score(X_test, y_test)
+    # Test initial performance (will be poor with just one example)
+    initial_train_score = classifier.score(X_train[:10], y_train[:10])
+    initial_test_score = classifier.score(X_test, y_test)
     
-    print(f"Train accuracy: {train_score:.3f}")
-    print(f"Test accuracy: {test_score:.3f}\n")
+    print(f"Initial train accuracy (10 samples): {initial_train_score:.3f}")
+    print(f"Initial test accuracy: {initial_test_score:.3f}\n")
     
     # Add more examples incrementally
     print("Adding more training examples...")

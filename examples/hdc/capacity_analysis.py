@@ -325,22 +325,53 @@ def main():
     print("\nAnalysis complete!")
 
 
+def format_table(data, headers="keys", tablefmt=None):
+    """Format data as a simple table."""
+    if not data:
+        return ""
+    
+    # Get column headers
+    if isinstance(data[0], dict):
+        cols = list(data[0].keys())
+    else:
+        cols = [f"Col{i}" for i in range(len(data[0]))]
+    
+    # Calculate column widths
+    widths = {col: len(str(col)) for col in cols}
+    for row in data:
+        if isinstance(row, dict):
+            for col in cols:
+                widths[col] = max(widths[col], len(str(row.get(col, ""))))
+        else:
+            for i, val in enumerate(row):
+                widths[cols[i]] = max(widths[cols[i]], len(str(val)))
+    
+    # Print header
+    header_parts = []
+    for col in cols:
+        header_parts.append(str(col).ljust(widths[col]))
+    print(" | ".join(header_parts))
+    print("-+-".join("-" * widths[col] for col in cols))
+    
+    # Print rows
+    for row in data:
+        row_parts = []
+        if isinstance(row, dict):
+            for col in cols:
+                row_parts.append(str(row.get(col, "")).ljust(widths[col]))
+        else:
+            for i, val in enumerate(row):
+                row_parts.append(str(val).ljust(widths[cols[i]]))
+        print(" | ".join(row_parts))
+    
+    return ""
+
+
 if __name__ == "__main__":
     # Note: tabulate is optional, provide fallback
     try:
         from tabulate import tabulate
     except ImportError:
-        def tabulate(data, headers="keys", tablefmt="grid"):
-            """Simple fallback for tabulate."""
-            if isinstance(data, list) and data and isinstance(data[0], dict):
-                # Print header
-                keys = list(data[0].keys())
-                print(" | ".join(keys))
-                print("-" * (len(" | ".join(keys)) + 2))
-                # Print rows
-                for row in data:
-                    values = [str(row[k]) for k in keys]
-                    print(" | ".join(values))
-            return ""
+        tabulate = format_table
     
     main()

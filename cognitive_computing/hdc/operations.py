@@ -134,6 +134,19 @@ def bundle_hypervectors(
                 
             return bundled.astype(np.int8)
             
+        elif hypervector_type == "ternary":
+            # For ternary, sum and map to {-1, 0, 1}
+            summed = np.sum(hypervectors, axis=0)
+            bundled = np.zeros_like(summed)
+            
+            # Map based on thresholds
+            threshold = len(hypervectors) // 3
+            bundled[summed > threshold] = 1
+            bundled[summed < -threshold] = -1
+            # Values in between remain 0
+            
+            return bundled.astype(np.int8)
+            
     elif method == BundlingMethod.AVERAGE:
         # Average and threshold
         averaged = np.mean(hypervectors, axis=0)
@@ -142,6 +155,12 @@ def bundle_hypervectors(
             return (averaged > 0.5).astype(np.uint8)
         elif hypervector_type == "bipolar":
             return np.sign(averaged).astype(np.int8)
+        elif hypervector_type == "ternary":
+            # Map average to ternary values
+            bundled = np.zeros_like(averaged, dtype=np.int8)
+            bundled[averaged > 0.33] = 1
+            bundled[averaged < -0.33] = -1
+            return bundled
             
     elif method == BundlingMethod.SAMPLE:
         # Random sampling from inputs
@@ -173,9 +192,17 @@ def bundle_hypervectors(
             return (weighted_sum > 0.5).astype(np.uint8)
         elif hypervector_type == "bipolar":
             return np.sign(weighted_sum).astype(np.int8)
+        elif hypervector_type == "ternary":
+            bundled = np.zeros_like(weighted_sum, dtype=np.int8)
+            bundled[weighted_sum > 0.33] = 1
+            bundled[weighted_sum < -0.33] = -1
+            return bundled
             
     else:
         raise ValueError(f"Unknown bundling method: {method}")
+    
+    # Fallback - should not reach here
+    raise ValueError(f"Unsupported hypervector type: {hypervector_type}")
 
 
 def permute_hypervector(
