@@ -2,6 +2,17 @@
 
 This guide provides detailed walkthroughs of the VSA example scripts, explaining key concepts and demonstrating practical applications.
 
+## Important API Notes
+
+The VSA module uses an **array-based API** for consistency with the rest of the cognitive_computing package:
+
+- **No `encode()` method**: Use `vsa.generate_vector()` to create random vectors
+- **No vector objects in public API**: All operations work with numpy arrays directly
+- **No `inverse()`, `zero()`, or `identity()` methods**: Use appropriate numpy operations
+- **Direct architecture instantiation**: Use `BSC()`, `MAP()`, etc. instead of factory functions
+- **Permutation requires shift parameter**: Use `vsa.permute(vector, shift=n)`
+- **Thinning rate parameter**: `vsa.thin(vector, rate=0.9)` zeros out 90% of elements
+
 ## Example Scripts Overview
 
 1. **basic_vsa_demo.py** - Introduction to VSA concepts
@@ -20,14 +31,20 @@ This example introduces fundamental VSA concepts through hands-on demonstrations
 
 #### 1. Vector Types
 ```python
+# Import vector types and utility function
+from cognitive_computing.vsa import (
+    BinaryVector, BipolarVector, TernaryVector, 
+    ComplexVector, IntegerVector, generate_random_vector
+)
+
 # Binary vectors for hardware efficiency
-binary_vec = BinaryVector.random(1000)
+binary_vec = generate_random_vector(1000, BinaryVector)
 
 # Bipolar vectors for general use
-bipolar_vec = BipolarVector.random(1000)
+bipolar_vec = generate_random_vector(1000, BipolarVector)
 
-# Sparse ternary vectors
-ternary_vec = TernaryVector.random(1000, sparsity=0.1)
+# Sparse ternary vectors (sparsity = fraction of non-zeros)
+ternary_vec = generate_random_vector(1000, TernaryVector, sparsity=0.1)
 ```
 
 **Learning Points:**
@@ -38,6 +55,17 @@ ternary_vec = TernaryVector.random(1000, sparsity=0.1)
 
 #### 2. Binding Operations
 ```python
+# Create VSA instance
+vsa = create_vsa(
+    dimension=1000,
+    vector_type='binary',
+    vsa_type='bsc'  # Binary Spatter Codes use XOR binding
+)
+
+# Generate vectors (no encode() method)
+red = vsa.generate_vector()
+apple = vsa.generate_vector()
+
 # XOR binding (binary vectors)
 red_apple = vsa.bind(red, apple)
 
@@ -52,12 +80,18 @@ original = vsa.bind(red_apple, red)  # Recovers apple
 
 #### 3. Bundling (Superposition)
 ```python
+# Generate concept vectors
+apple = vsa.generate_vector()
+banana = vsa.generate_vector()
+orange = vsa.generate_vector()
+car = vsa.generate_vector()
+
 # Create a set representation
 fruits = vsa.bundle([apple, banana, orange])
 
 # Check membership
-similarity = vsa.similarity(fruits, apple)  # High
-similarity = vsa.similarity(fruits, car)    # Low
+similarity = vsa.similarity(fruits, apple)  # ~0.3-0.4
+similarity = vsa.similarity(fruits, car)    # ~0.0
 ```
 
 **Important Concepts:**
@@ -182,9 +216,14 @@ Comprehensive exploration of different vector types and their properties.
 ### Binary Vectors
 
 ```python
+# Generate binary vectors
+binary_vec = generate_random_vector(1000, BinaryVector)
+vec1 = binary_vec.data  # Access numpy array
+vec2 = generate_random_vector(1000, BinaryVector).data
+
 # Properties
-density = np.mean(binary_vec.data)  # ~0.5
-hamming_dist = np.sum(vec1.data != vec2.data)
+density = np.mean(vec1)  # ~0.5
+hamming_dist = np.sum(vec1 != vec2)
 ```
 
 **Use Cases:**
@@ -195,9 +234,13 @@ hamming_dist = np.sum(vec1.data != vec2.data)
 ### Bipolar Vectors
 
 ```python
+# Generate bipolar vectors
+vec1 = generate_random_vector(1000, BipolarVector).data
+vec2 = generate_random_vector(1000, BipolarVector).data
+
 # Statistical properties
-mean = np.mean(bipolar_vec.data)  # ~0
-correlation = np.corrcoef(vec1.data, vec2.data)[0,1]  # ~0
+mean = np.mean(vec1)  # ~0
+correlation = np.corrcoef(vec1, vec2)[0,1]  # ~0
 ```
 
 **Applications:**
@@ -208,9 +251,14 @@ correlation = np.corrcoef(vec1.data, vec2.data)[0,1]  # ~0
 ### Ternary Vectors
 
 ```python
+# Generate sparse ternary vector
+# Note: sparsity parameter = fraction of non-zeros
+ternary_vec = generate_random_vector(1000, TernaryVector, sparsity=0.1)
+vec_data = ternary_vec.data
+
 # Sparse representation
-sparsity = 0.1  # 90% zeros
-active_elements = np.sum(ternary_vec.data != 0)
+sparsity = 0.1  # 10% non-zeros, 90% zeros
+active_elements = np.sum(vec_data != 0)
 ```
 
 **Benefits:**
@@ -221,9 +269,13 @@ active_elements = np.sum(ternary_vec.data != 0)
 ### Complex Vectors
 
 ```python
+# Generate complex vector
+complex_vec = generate_random_vector(1000, ComplexVector)
+vec_data = complex_vec.data
+
 # Phase-based encoding
-phases = np.angle(complex_vec.data)
-magnitudes = np.abs(complex_vec.data)  # All 1.0
+phases = np.angle(vec_data)
+magnitudes = np.abs(vec_data)  # All 1.0
 ```
 
 **Advantages:**
@@ -234,6 +286,10 @@ magnitudes = np.abs(complex_vec.data)  # All 1.0
 ### Integer Vectors
 
 ```python
+# Generate integer vectors
+vec1 = generate_random_vector(1000, IntegerVector, modulus=256)
+vec2 = generate_random_vector(1000, IntegerVector, modulus=256)
+
 # Modular arithmetic
 modulus = 256
 result = (vec1.data + vec2.data) % modulus
@@ -266,12 +322,20 @@ Advanced reasoning capabilities using VSA.
 # A:B :: C:?
 # King:Queen :: Man:Woman
 
-# Learn transformation
-transform = vsa.bind(queen, vsa.inverse(king))
+# Generate concept vectors
+king = vsa.generate_vector()
+queen = vsa.generate_vector()
+man = vsa.generate_vector()
+woman = vsa.generate_vector()
 
-# Apply to new input
-result = vsa.bind(transform, man)
-# Result similar to woman
+# Learn transformation (no inverse() method)
+# For multiplication binding, we use a different approach
+transform = vsa.bind(queen, king)
+
+# Apply transformation
+result = vsa.bind(transform, vsa.bind(man, king))
+# Note: Similarity scores are typically low (~0.0) due to 
+# multiplication binding not being ideal for analogies
 ```
 
 **Key Concept**: VSA can learn and apply relational transformations.
