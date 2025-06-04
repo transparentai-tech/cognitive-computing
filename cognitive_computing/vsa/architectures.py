@@ -546,8 +546,8 @@ class HRRCompatibility(VSA):
         
         # Import HRR operations if available
         try:
-            from ..hrr.operations import CircularConvolution
-            self.conv_op = CircularConvolution(dimension)
+            from ..hrr import operations as hrr_ops
+            self.hrr_ops = hrr_ops
             self.use_native_hrr = True
         except ImportError:
             logger.warning("HRR module not available, using VSA convolution")
@@ -556,21 +556,21 @@ class HRRCompatibility(VSA):
     def bind(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         """HRR binding via circular convolution."""
         if self.use_native_hrr:
-            return self.conv_op.convolve(x, y)
+            return self.hrr_ops.circular_convolution(x, y)
         else:
             return super().bind(x, y)
     
     def unbind(self, xy: np.ndarray, y: np.ndarray) -> np.ndarray:
         """HRR unbinding via circular correlation."""
         if self.use_native_hrr:
-            return self.conv_op.correlate(xy, y)
+            return self.hrr_ops.circular_correlation(xy, y)
         else:
             return super().unbind(xy, y)
     
     def make_unitary(self, vector: np.ndarray) -> np.ndarray:
         """Make vector unitary using HRR method."""
-        if self.use_native_hrr and hasattr(self.conv_op, 'make_unitary'):
-            return self.conv_op.make_unitary(vector)
+        if self.use_native_hrr and hasattr(self.hrr_ops, 'make_unitary'):
+            return self.hrr_ops.make_unitary(vector)
         else:
             # Use FHRR approach
             fhrr = FHRR(self.config.dimension, use_real=True)
