@@ -133,7 +133,9 @@ def measure_capacity(
     # Capacity estimation: number of vectors that can be stored with < threshold interference
     expected_interference = mean_sim + 3 * std_sim  # 3-sigma bound
     if expected_interference < similarity_threshold:
-        estimated_capacity = int(2 ** (hdc.dimension * (1 - expected_interference)))
+        # Avoid overflow by capping exponent
+        exponent = min(hdc.dimension * (1 - expected_interference), 50)
+        estimated_capacity = int(2 ** exponent)
     else:
         estimated_capacity = int(hdc.dimension / (10 * expected_interference))
         

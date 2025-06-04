@@ -12,7 +12,7 @@ of different HDC configurations:
 
 import numpy as np
 from cognitive_computing.hdc import (
-    create_hdc,
+    HDC,
     HDCConfig,
     measure_capacity,
     benchmark_operations,
@@ -23,7 +23,6 @@ from cognitive_computing.hdc import (
     plot_capacity_analysis,
 )
 import matplotlib.pyplot as plt
-from tabulate import tabulate
 
 
 def capacity_estimation_demo():
@@ -38,7 +37,7 @@ def capacity_estimation_demo():
         
         # Create HDC system
         config = HDCConfig(dimension=dim, hypervector_type="bipolar")
-        hdc = create_hdc(config)
+        hdc = HDC(config)
         
         # Measure capacity
         metrics = measure_capacity(
@@ -85,7 +84,7 @@ def noise_tolerance_demo():
         
         # Create HDC system
         config = HDCConfig(dimension=dimension, hypervector_type=hv_type)
-        hdc = create_hdc(config)
+        hdc = HDC(config)
         
         # Measure noise tolerance
         metrics = measure_capacity(
@@ -126,7 +125,7 @@ def operation_benchmarking_demo():
         
         # Create HDC system
         config = HDCConfig(dimension=dim)
-        hdc = create_hdc(config)
+        hdc = HDC(config)
         
         # Benchmark
         times = benchmark_operations(hdc, num_trials=100)
@@ -152,7 +151,7 @@ def operation_benchmarking_demo():
         times_list = []
         for dim in dimensions:
             config = HDCConfig(dimension=dim)
-            hdc = create_hdc(config)
+            hdc = HDC(config)
             times = benchmark_operations(hdc, num_trials=50)
             times_list.append(times[op])
         

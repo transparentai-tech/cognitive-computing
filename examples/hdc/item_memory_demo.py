@@ -14,7 +14,7 @@ import numpy as np
 import tempfile
 import os
 from cognitive_computing.hdc import (
-    create_hdc,
+    HDC,
     HDCConfig,
     ItemMemory,
     CategoricalEncoder,
@@ -30,7 +30,7 @@ def basic_memory_demo():
     
     # Create HDC system
     config = HDCConfig(dimension=10000, hypervector_type="bipolar")
-    hdc = create_hdc(config)
+    hdc = HDC(config)
     
     # Create item memory
     memory = ItemMemory(dimension=config.dimension)
@@ -91,7 +91,7 @@ def semantic_memory_demo():
     
     # Create HDC system
     config = HDCConfig(dimension=10000, hypervector_type="bipolar")
-    hdc = create_hdc(config)
+    hdc = HDC(config)
     
     # Create semantic vectors using composition
     print("1. Creating semantic vectors...")
@@ -225,7 +225,7 @@ def memory_management_demo():
     print(f"1. Memory with max capacity: {max_items} items")
     
     # Generate items
-    hdc = create_hdc(HDCConfig(dimension=1000))
+    hdc = HDC(HDCConfig(dimension=1000))
     
     # Add items beyond capacity
     print("\n2. Adding items (demonstrating LRU eviction)...")
@@ -237,7 +237,7 @@ def memory_management_demo():
         if len(memory) == max_items:
             print(f"   (Memory at capacity)")
     
-    print(f"\n   Final items in memory: {memory.labels()}")
+    print(f"\n   Final items in memory: {memory.labels}")
     
     # Access tracking
     print("\n3. Access tracking and statistics...")
@@ -274,7 +274,7 @@ def persistence_demo():
     
     # Create and populate memory
     memory = ItemMemory(dimension=1000)
-    hdc = create_hdc(HDCConfig(dimension=1000))
+    hdc = HDC(HDCConfig(dimension=1000))
     
     # Add items
     items = {
@@ -307,7 +307,7 @@ def persistence_demo():
         # Load from pickle
         memory.load(pickle_path, format="pickle")
         print(f"\n4. Loaded from pickle, size: {len(memory)}")
-        print(f"   Items: {memory.labels()}")
+        print(f"   Items: {memory.labels}")
         
         # Verify content
         print("\n5. Verifying loaded content...")
@@ -326,7 +326,7 @@ def similarity_threshold_demo():
     
     # Create memory
     memory = ItemMemory(dimension=10000)
-    hdc = create_hdc(HDCConfig(dimension=10000))
+    hdc = HDC(HDCConfig(dimension=10000))
     
     # Create related items
     base = hdc.generate_hypervector()

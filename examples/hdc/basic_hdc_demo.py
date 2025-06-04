@@ -11,7 +11,7 @@ This example demonstrates basic operations in Hyperdimensional Computing:
 
 import numpy as np
 from cognitive_computing.hdc import (
-    create_hdc,
+    HDC,
     HDCConfig,
     ItemMemory,
     plot_hypervector,
@@ -29,7 +29,7 @@ def main():
         dimension=10000,
         hypervector_type="bipolar"
     )
-    hdc = create_hdc(config)
+    hdc = HDC(config)
     print(f"Created HDC system with {config.dimension}-dimensional {config.hypervector_type} vectors\n")
     
     # Generate random hypervectors

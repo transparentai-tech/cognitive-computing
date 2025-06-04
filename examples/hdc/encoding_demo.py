@@ -19,7 +19,7 @@ from cognitive_computing.hdc import (
     SpatialEncoder,
     RecordEncoder,
     NGramEncoder,
-    create_hdc,
+    HDC,
     HDCConfig,
     plot_hypervector_comparison,
     plot_similarity_matrix,
@@ -130,7 +130,7 @@ def sequence_encoding_demo():
     print("\n=== Sequence Encoding Demo ===\n")
     
     # Create HDC system for binding operations
-    hdc = create_hdc(HDCConfig(dimension=1000))
+    hdc = HDC(HDCConfig(dimension=1000))
     
     # N-gram encoding
     ngram_encoder = SequenceEncoder(
@@ -214,7 +214,7 @@ def spatial_encoding_demo():
     
     # Check distance preservation
     print("\nSpatial similarities (2D):")
-    hdc = create_hdc(HDCConfig(dimension=1000))
+    hdc = HDC(HDCConfig(dimension=1000))
     
     for name1, point1 in points_2d.items():
         for name2, point2 in points_2d.items():
@@ -261,7 +261,7 @@ def record_encoding_demo():
     
     # Find similar records
     print("\nRecord similarities:")
-    hdc = create_hdc(HDCConfig(dimension=1000))
+    hdc = HDC(HDCConfig(dimension=1000))
     
     vec_list = list(record_vectors.values())
     for i in range(len(vec_list)):
@@ -320,7 +320,7 @@ def text_encoding_demo():
         print(f"Encoded '{text}'")
     
     # Compare similarities
-    hdc = create_hdc(HDCConfig(dimension=1000))
+    hdc = HDC(HDCConfig(dimension=1000))
     
     print("\nCharacter n-gram similarities:")
     for n1, t1 in texts.items():
