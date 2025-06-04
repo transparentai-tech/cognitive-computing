@@ -49,9 +49,9 @@ class BSC(VSA):
             dimension=dimension,
             vector_type=VectorType.BINARY,
             vsa_type=VSAType.BSC,
-            binding_operation="xor",
+            binding_method="xor",
             sparsity=sparsity,
-            normalize=False,  # Binary vectors don't need normalization
+            normalize_result=False,  # Binary vectors don't need normalization
             seed=seed
         )
         super().__init__(config)
@@ -146,7 +146,7 @@ class MAP(VSA):
             dimension=dimension,
             vector_type=vector_type,
             vsa_type=VSAType.MAP,
-            binding_operation="map",
+            binding_method="map",
             seed=seed
         )
         super().__init__(config)
@@ -176,7 +176,7 @@ class MAP(VSA):
             result = result + x[perm] + y[perm]
         
         # Normalize based on vector type
-        if self.config.normalize:
+        if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
         
         return result
@@ -202,7 +202,7 @@ class MAP(VSA):
                 result = result / y
                 result[~np.isfinite(result)] = 0
         
-        if self.config.normalize:
+        if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
         
         return result
@@ -263,7 +263,7 @@ class FHRR(VSA):
             dimension=dimension,
             vector_type=VectorType.COMPLEX,
             vsa_type=VSAType.FHRR,
-            binding_operation="multiplication",
+            binding_method="multiplication",
             seed=seed
         )
         super().__init__(config)
@@ -281,12 +281,12 @@ class FHRR(VSA):
         """
         if self.use_real:
             # Generate random real vector
-            real_vec = self._rng.randn(self.dimension)
+            real_vec = self._rng.randn(self.config.dimension)
             # Its FFT will have Hermitian symmetry
             return real_vec.astype(np.float32)
         else:
             # Generate random phases
-            phases = self._rng.uniform(0, 2 * np.pi, self.dimension)
+            phases = self._rng.uniform(0, 2 * np.pi, self.config.dimension)
             return np.exp(1j * phases).astype(np.complex64)
     
     def bind(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -310,7 +310,7 @@ class FHRR(VSA):
         else:
             result = result.astype(np.complex64)
         
-        if self.config.normalize:
+        if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
         
         return result
@@ -339,7 +339,7 @@ class FHRR(VSA):
         else:
             result = result.astype(np.complex64)
         
-        if self.config.normalize:
+        if self.config.normalize_result:
             result = self.vector_factory.normalize(result)
         
         return result
@@ -401,7 +401,7 @@ class SparseVSA(VSA):
             dimension=dimension,
             vector_type=VectorType.TERNARY,
             vsa_type=VSAType.SPARSE,
-            binding_operation="multiplication",
+            binding_method="multiplication",
             sparsity=sparsity,
             seed=seed
         )
@@ -495,7 +495,7 @@ class HRRCompatibility(VSA):
             dimension=dimension,
             vector_type=VectorType.REAL,  # HRR uses real vectors
             vsa_type=VSAType.HRR,
-            binding_operation="convolution",
+            binding_method="convolution",
             seed=seed
         )
         super().__init__(config)
