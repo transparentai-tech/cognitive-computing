@@ -54,6 +54,22 @@ from .networks import (
     CircularConvolution,
 )
 
+# Production imports
+from .production import (
+    Condition,
+    MatchCondition,
+    CompareCondition,
+    CompoundCondition,
+    Effect,
+    SetEffect,
+    BindEffect,
+    CompoundEffect,
+    Production,
+    ProductionSystem,
+    ConditionalModule,
+    parse_production_rules,
+)
+
 __all__ = [
     # Core
     "SPAConfig",
@@ -88,4 +104,17 @@ __all__ = [
     "Probe",
     "Network",
     "CircularConvolution",
+    # Production
+    "Condition",
+    "MatchCondition",
+    "CompareCondition",
+    "CompoundCondition",
+    "Effect",
+    "SetEffect",
+    "BindEffect",
+    "CompoundEffect",
+    "Production",
+    "ProductionSystem",
+    "ConditionalModule",
+    "parse_production_rules",
 ]
