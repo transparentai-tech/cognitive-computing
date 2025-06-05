@@ -602,7 +602,7 @@ class TestProductionSystem:
         
         cycles = system.run(max_cycles=10)
         
-        assert cycles == 3  # A->B, B->C, no match
+        assert cycles == 2  # A->B, B->C, no match
         assert np.allclose(state.state, vocab["C"].vector)
         assert system._fired_productions == ["a_to_b", "b_to_c"]
         

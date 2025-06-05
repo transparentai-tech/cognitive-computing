@@ -574,11 +574,13 @@ class ProductionSystem:
         """
         self._fired_productions.clear()
         
+        cycles = 0
         for cycle in range(max_cycles):
             if not self.step():
                 break
+            cycles = cycle + 1
                 
-        return cycle + 1
+        return cycles
     
     def get_fired_productions(self) -> List[str]:
         """Get list of fired production names."""

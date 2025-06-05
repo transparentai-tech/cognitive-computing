@@ -90,6 +90,20 @@ from .compiler import (
     optimize_network,
 )
 
+# Utils imports
+from .utils import (
+    make_unitary,
+    similarity,
+    normalize_semantic_pointer,
+    generate_pointers,
+    analyze_vocabulary,
+    measure_binding_capacity,
+    create_transformation_matrix,
+    estimate_module_capacity,
+    analyze_production_system,
+    optimize_action_thresholds,
+)
+
 __all__ = [
     # Core
     "SPAConfig",
@@ -151,4 +165,15 @@ __all__ = [
     "compile_model",
     "parse_actions",
     "optimize_network",
+    # Utils
+    "make_unitary",
+    "similarity",
+    "normalize_semantic_pointer",
+    "generate_pointers",
+    "analyze_vocabulary",
+    "measure_binding_capacity",
+    "create_transformation_matrix",
+    "estimate_module_capacity",
+    "analyze_production_system",
+    "optimize_action_thresholds",
 ]

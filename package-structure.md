@@ -96,7 +96,7 @@ cognitive-computing/
 │   │   ├── production.py            # Production system for rule-based processing
 │   │   ├── control.py               # Cognitive control mechanisms
 │   │   ├── compiler.py              # High-level model specification and compilation
-│   │   ├── utils.py                 # SPA utility functions (NOT YET IMPLEMENTED)
+│   │   ├── utils.py                 # SPA utility functions
 │   │   └── visualizations.py        # SPA visualizations (NOT YET IMPLEMENTED)
 │   │
 │   └── common/                  # Shared utilities
@@ -149,7 +149,7 @@ cognitive-computing/
 │   │   ├── test_production.py       # Production system tests
 │   │   ├── test_control.py          # Cognitive control tests
 │   │   ├── test_compiler.py         # Model compilation tests
-│   │   ├── test_utils.py            # Utility function tests (NOT YET CREATED)
+│   │   ├── test_utils.py            # Utility function tests
 │   │   └── test_visualizations.py   # Visualization tests (NOT YET CREATED)
 │   └── conftest.py                  # Pytest configuration
 │
