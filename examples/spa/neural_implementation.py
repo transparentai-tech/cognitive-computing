@@ -19,10 +19,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from cognitive_computing.spa import (
     SPAConfig, Vocabulary, SemanticPointer,
-    Network, Ensemble, EnsembleArray, Connection, Probe,
-    CircularConvolution, NeuronParams,
+    Network, Ensemble, EnsembleArray, 
+    NeuronParams,
     State, Memory, Gate
 )
+from cognitive_computing.spa.operations import circular_convolution
 from cognitive_computing.spa.visualizations import (
     plot_network_graph, plot_module_activity
 )
@@ -38,18 +39,18 @@ def demonstrate_ensemble_basics():
     
     # Neuron parameters
     neuron_params = NeuronParams(
+        n_neurons=n_neurons,
         tau_rc=0.02,  # Membrane time constant
         tau_ref=0.002,  # Refractory period
-        gain_range=(0.5, 2.0),  # Gain distribution
-        bias_range=(-1.0, 1.0)  # Bias distribution
+        max_rates=(200.0, 400.0),  # Maximum firing rates in Hz
+        intercepts=(-1.0, 1.0)  # Intercepts for tuning curves
     )
     
     # Create ensemble
     ensemble = Ensemble(
         name="scalar_ensemble",
-        n_neurons=n_neurons,
         dimensions=dimensions,
-        params=neuron_params
+        neurons=neuron_params
     )
     
     print(f"\n1. Ensemble Properties:")
@@ -121,17 +122,16 @@ def demonstrate_ensemble_arrays():
     vocab.create_pointer("FRUIT")
     
     # Create ensemble array
-    config = SPAConfig(
-        dimensions=64,
-        neurons_per_dimension=50,
-        subdimensions=16  # Group neurons into sub-ensembles
-    )
+    dimensions = 64
+    subdimensions = 16
+    n_ensembles = dimensions // subdimensions
+    neurons_per_ensemble = 50
     
     ensemble_array = EnsembleArray(
         name="semantic_array",
-        dimensions=64,
-        neurons_per_dimension=50,
-        subdimensions=16
+        n_ensembles=n_ensembles,
+        dimensions_per_ensemble=subdimensions,
+        neurons_per_ensemble=neurons_per_ensemble
     )
     
     print(f"\n1. Ensemble Array Configuration:")

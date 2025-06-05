@@ -20,7 +20,7 @@ from cognitive_computing.spa import (
     SPAConfig, Vocabulary, SemanticPointer,
     State, Buffer, Gate, Memory,
     Sequencing, CognitiveControl,
-    ProductionSystem, Production, Condition, Effect,
+    ProductionSystem, Production, MatchCondition, SetEffect, CompoundCondition,
     ActionSet, Action
 )
 from cognitive_computing.spa.visualizations import (
@@ -51,7 +51,8 @@ def create_motor_sequence():
         vocab.create_pointer(state)
     
     # Create sequencing controller
-    sequencer = Sequencing()
+    config = SPAConfig(dimension=128)
+    sequencer = Sequencing(128, config, vocab)
     
     # Create motor state
     motor_state = State("motor", 128)
@@ -62,15 +63,27 @@ def create_motor_sequence():
     # Create sequence for typing "HELLO"
     typing_sequence = []
     for letter in "HELLO":
-        # Move to key
-        typing_sequence.append(vocab["MOVE_TO"] * vocab[f"KEY_{letter}"])
-        # Press key
-        typing_sequence.append(vocab["PRESS"] * vocab[f"KEY_{letter}"])
-        # Release key
-        typing_sequence.append(vocab["RELEASE"] * vocab[f"KEY_{letter}"])
+        # Create semantic pointer names for each action
+        # We'll encode the action and letter together
+        move_name = f"MOVE_TO_KEY_{letter}"
+        press_name = f"PRESS_KEY_{letter}"
+        release_name = f"RELEASE_KEY_{letter}"
+        
+        # Add these compound actions to vocab
+        vocab.create_pointer(move_name)
+        vocab.create_pointer(press_name)
+        vocab.create_pointer(release_name)
+        
+        # Store the compound vectors
+        vocab.pointers[move_name].vector = (vocab["MOVE_TO"] * vocab[f"KEY_{letter}"]).normalize().vector
+        vocab.pointers[press_name].vector = (vocab["PRESS"] * vocab[f"KEY_{letter}"]).normalize().vector
+        vocab.pointers[release_name].vector = (vocab["RELEASE"] * vocab[f"KEY_{letter}"]).normalize().vector
+        
+        # Add to sequence
+        typing_sequence.extend([move_name, press_name, release_name])
     
-    # Add the sequence
-    sequencer.define_sequence("type_hello", [s.vector for s in typing_sequence])
+    # Add the sequence using names
+    sequencer.define_sequence("type_hello", typing_sequence)
     
     print("   Sequence 'type_hello' defined with steps:")
     for i in range(0, len(typing_sequence), 3):
@@ -85,24 +98,23 @@ def create_motor_sequence():
     typed_letters = []
     step_count = 0
     
-    while not sequencer.is_sequence_complete("type_hello") and step_count < 20:
-        current = sequencer.get_current_step("type_hello")
+    while step_count < 20:
+        current = sequencer.next_step()
         
-        if current is not None:
-            motor_state.state = current
+        if current is None:
+            break  # Sequence complete
             
-            # Decode action
-            pointer = motor_state.get_semantic_pointer(vocab)
+        if current is not None and isinstance(current, str):
+            # Get the vector for this step
+            motor_state.state = vocab[current].vector
             
             # Check for PRESS actions
             for letter in "HELLO":
-                press_vec = vocab["PRESS"] * vocab[f"KEY_{letter}"]
-                if pointer.similarity(press_vec) > 0.7:
+                if f"PRESS_KEY_{letter}" == current:
                     typed_letters.append(letter)
                     print(f"   Step {step_count + 1}: Pressed {letter}")
                     break
         
-        sequencer.advance_sequence("type_hello")
         step_count += 1
     
     print(f"   Typed: {''.join(typed_letters)}")
@@ -144,35 +156,51 @@ def create_cooking_sequence():
     status_state = State("status", 256)
     
     # Create hierarchical sequencer
-    main_seq = Sequencing()
-    sub_seq = Sequencing()
+    config = SPAConfig(dimension=256)
+    main_seq = Sequencing(256, config, vocab)
+    sub_seq = Sequencing(256, config, vocab)
     
     print("\n1. Defining Hierarchical Recipe:")
     
     # Sub-sequence: Mix batter
-    mix_steps = [
-        vocab["GET"] * vocab["BOWL"],
-        vocab["GET"] * vocab["EGGS"],
-        vocab["GET"] * vocab["MILK"],
-        vocab["GET"] * vocab["FLOUR"],
-        vocab["MIX"] * vocab["WHISK"]
-    ]
+    mix_step_names = []
+    for action, item in [
+        ("GET", "BOWL"),
+        ("GET", "EGGS"),
+        ("GET", "MILK"),
+        ("GET", "FLOUR"),
+        ("MIX", "WHISK")
+    ]:
+        step_name = f"{action}_{item}"
+        vocab.create_pointer(step_name)
+        vocab.pointers[step_name].vector = (vocab[action] * vocab[item]).normalize().vector
+        mix_step_names.append(step_name)
     
-    sub_seq.define_sequence("mix_batter", [s.vector for s in mix_steps])
+    sub_seq.define_sequence("mix_batter", mix_step_names)
     
     # Main sequence: Make pancakes
-    main_steps = [
-        vocab["GET"] * vocab["PAN"],
-        vocab["HEAT"] * vocab["PAN"],
-        vocab["MIX"],  # Trigger sub-sequence
-        vocab["POUR"] * vocab["BOWL"],
-        vocab["WAIT"],
-        vocab["FLIP"] * vocab["SPATULA"],
-        vocab["WAIT"],
-        vocab["SERVE"]
+    main_step_names = []
+    main_steps_def = [
+        ("GET", "PAN"),
+        ("HEAT", "PAN"),
+        ("MIX", None),  # Trigger sub-sequence
+        ("POUR", "BOWL"),
+        ("WAIT", None),
+        ("FLIP", "SPATULA"),
+        ("WAIT", None),
+        ("SERVE", None)
     ]
     
-    main_seq.define_sequence("make_pancakes", [s.vector for s in main_steps])
+    for action, item in main_steps_def:
+        if item:
+            step_name = f"{action}_{item}"
+            vocab.create_pointer(step_name)
+            vocab.pointers[step_name].vector = (vocab[action] * vocab[item]).normalize().vector
+        else:
+            step_name = action
+        main_step_names.append(step_name)
+    
+    main_seq.define_sequence("make_pancakes", main_step_names)
     
     print("   Main sequence: Make Pancakes")
     print("   - Prepare pan")
@@ -187,54 +215,52 @@ def create_cooking_sequence():
     step_count = 0
     in_subsequence = False
     
-    while not main_seq.is_sequence_complete("make_pancakes") and step_count < 30:
-        current = main_seq.get_current_step("make_pancakes")
+    while step_count < 30:
+        if not in_subsequence:
+            current = main_seq.next_step()
+            
+            if current is None:
+                break  # Main sequence complete
+                
+            if isinstance(current, str):
+                # Check if we need to execute sub-sequence
+                if current == "MIX":
+                    print(f"\n   [Entering sub-sequence: Mix Batter]")
+                    sub_seq.start_sequence("mix_batter")
+                    in_subsequence = True
+                else:
+                    # Regular main sequence step
+                    action_state.state = vocab[current].vector
+                    
+                    # Decode and print action
+                    if "_" in current:
+                        action, item = current.split("_", 1)
+                        print(f"   Step {step_count + 1}: {action} {item}")
+                    else:
+                        print(f"   Step {step_count + 1}: {current}")
+                    
+                    # Update status based on action
+                    if "HEAT" in current:
+                        status_state.state = vocab["COOKING"].vector
+                    elif current == "SERVE":
+                        status_state.state = vocab["READY"].vector
         
-        if current is not None:
-            action_state.state = current
-            pointer = action_state.get_semantic_pointer(vocab)
+        # Execute sub-sequence if active
+        if in_subsequence:
+            sub_current = sub_seq.next_step()
             
-            # Check if we need to execute sub-sequence
-            if pointer.similarity(vocab["MIX"]) > 0.7 and not in_subsequence:
-                print(f"\n   [Entering sub-sequence: Mix Batter]")
-                sub_seq.start_sequence("mix_batter")
-                in_subsequence = True
-            
-            # Execute sub-sequence if active
-            if in_subsequence and not sub_seq.is_sequence_complete("mix_batter"):
-                sub_current = sub_seq.get_current_step("mix_batter")
-                if sub_current is not None:
-                    action_state.state = sub_current
-                    sub_pointer = action_state.get_semantic_pointer(vocab)
-                    
-                    # Decode sub-action
-                    for act in actions:
-                        for obj in ingredients + tools:
-                            test_vec = vocab[act] * vocab[obj]
-                            if sub_pointer.similarity(test_vec) > 0.5:
-                                print(f"     - {act} {obj}")
-                                break
-                    
-                    sub_seq.advance_sequence("mix_batter")
-                
-                if sub_seq.is_sequence_complete("mix_batter"):
-                    print("   [Sub-sequence complete]")
-                    in_subsequence = False
-                    status_state.state = vocab["MIXED"].vector
+            if sub_current is None:
+                # Sub-sequence complete
+                print("   [Sub-sequence complete]")
+                in_subsequence = False
+                status_state.state = vocab["MIXED"].vector
             else:
-                # Regular main sequence step
-                for act in actions:
-                    if pointer.similarity(vocab[act]) > 0.5:
-                        print(f"   Step {step_count + 1}: {act}")
-                        
-                        # Update status based on action
-                        if act == "HEAT":
-                            status_state.state = vocab["COOKING"].vector
-                        elif act == "SERVE":
-                            status_state.state = vocab["READY"].vector
-                        break
+                action_state.state = vocab[sub_current].vector
                 
-                main_seq.advance_sequence("make_pancakes")
+                # Decode sub-action
+                if "_" in sub_current:
+                    action, item = sub_current.split("_", 1)
+                    print(f"     - {action} {item}")
         
         step_count += 1
     
@@ -276,58 +302,39 @@ def demonstrate_conditional_sequences():
     print("\n1. Defining Conditional Rules:")
     
     # Rule: Green light + Clear -> GO
+    green_cond = MatchCondition("traffic_light", "GREEN", threshold=0.5)
+    clear_cond = MatchCondition("condition", "CLEAR", threshold=0.5)
+    green_clear = CompoundCondition([green_cond, clear_cond], "and")
+    
     rule1 = Production(
         name="green_clear_go",
-        condition=Condition(
-            lambda: light_state.get_semantic_pointer(vocab).similarity(vocab["GREEN"]) > 0.5 and
-                   condition_state.get_semantic_pointer(vocab).similarity(vocab["CLEAR"]) > 0.5,
-            "green light AND clear"
-        ),
-        effect=Effect(
-            lambda: setattr(action_state, 'state', vocab["GO"].vector),
-            "action GO"
-        )
+        condition=green_clear,
+        effect=SetEffect("action", "GO")
     )
     
     # Rule: Green light + Pedestrian -> WAIT
+    pedestrian_cond = MatchCondition("condition", "PEDESTRIAN", threshold=0.5)
+    green_pedestrian = CompoundCondition([green_cond, pedestrian_cond], "and")
+    
     rule2 = Production(
         name="green_pedestrian_wait",
-        condition=Condition(
-            lambda: light_state.get_semantic_pointer(vocab).similarity(vocab["GREEN"]) > 0.5 and
-                   condition_state.get_semantic_pointer(vocab).similarity(vocab["PEDESTRIAN"]) > 0.5,
-            "green light AND pedestrian"
-        ),
-        effect=Effect(
-            lambda: setattr(action_state, 'state', vocab["WAIT"].vector),
-            "action WAIT"
-        ),
+        condition=green_pedestrian,
+        effect=SetEffect("action", "WAIT"),
         priority=2.0  # Higher priority for safety
     )
     
     # Rule: Red light -> STOP
     rule3 = Production(
         name="red_stop",
-        condition=Condition(
-            lambda: light_state.get_semantic_pointer(vocab).similarity(vocab["RED"]) > 0.5,
-            "red light"
-        ),
-        effect=Effect(
-            lambda: setattr(action_state, 'state', vocab["STOP"].vector),
-            "action STOP"
-        )
+        condition=MatchCondition("traffic_light", "RED", threshold=0.5),
+        effect=SetEffect("action", "STOP")
     )
     
-    # Rule: Yellow light + Clear -> SLOW
+    # Rule: Yellow light -> SLOW
     rule4 = Production(
         name="yellow_slow",
-        condition=Condition(
-            lambda: light_state.get_semantic_pointer(vocab).similarity(vocab["YELLOW"]) > 0.5,
-            "yellow light"
-        ),
-        effect=Effect(
-            lambda: setattr(action_state, 'state', vocab["SLOW"].vector),
-            "action SLOW"
-        )
+        condition=MatchCondition("traffic_light", "YELLOW", threshold=0.5),
+        effect=SetEffect("action", "SLOW")
     )
     
     ps.add_production(rule1)
@@ -335,12 +342,14 @@ def demonstrate_conditional_sequences():
     ps.add_production(rule3)
     ps.add_production(rule4)
     
-    ps.set_context({
-        "traffic_light": light_state,
-        "condition": condition_state,
-        "action": action_state,
-        "vocab": vocab
-    })
+    ps.set_context(
+        modules={
+            "traffic_light": light_state,
+            "condition": condition_state,
+            "action": action_state
+        },
+        vocab=vocab
+    )
     
     print("   Rules defined for traffic scenarios")
     
@@ -364,12 +373,13 @@ def demonstrate_conditional_sequences():
         condition_state.state = vocab[condition].vector
         
         # Execute rules
-        fired = ps.step()
-        if fired:
-            print(f"   Rule fired: {fired.name}")
+        selected = ps.select_production()
+        if selected:
+            print(f"   Rule fired: {selected.name}")
+            selected.fire(ps._context)
             
             # Get action
-            action_ptr = action_state.get_semantic_pointer(vocab)
+            action_ptr = SemanticPointer(action_state.state, vocabulary=vocab)
             matches = vocab.cleanup(action_ptr.vector, top_n=1)
             if matches:
                 action = matches[0][0]
@@ -409,34 +419,19 @@ def demonstrate_interruption_handling():
     saved_state = Buffer("saved_state", 256)
     
     # Create sequencers
-    main_seq = Sequencing()
-    interrupt_seq = Sequencing()
+    config = SPAConfig(dimension=256)
+    main_seq = Sequencing(256, config, vocab)
+    interrupt_seq = Sequencing(256, config, vocab)
     
     print("\n1. Main Task Sequence:")
     
     # Main work sequence
-    work_steps = [
-        vocab["READ"],
-        vocab["THINK"], 
-        vocab["WRITE"],
-        vocab["TYPE"],
-        vocab["THINK"],
-        vocab["WRITE"]
-    ]
-    
-    main_seq.define_sequence("work", [s.vector for s in work_steps])
+    work_steps = ["READ", "THINK", "WRITE", "TYPE", "THINK", "WRITE"]
+    main_seq.define_sequence("work", work_steps)
     
     # Interruption sequence
-    phone_steps = [
-        vocab["HEAR_RING"],
-        vocab["PICK_UP"],
-        vocab["SAY_HELLO"],
-        vocab["LISTEN"],
-        vocab["RESPOND"],
-        vocab["HANG_UP"]
-    ]
-    
-    interrupt_seq.define_sequence("phone", [s.vector for s in phone_steps])
+    phone_steps = ["HEAR_RING", "PICK_UP", "SAY_HELLO", "LISTEN", "RESPOND", "HANG_UP"]
+    interrupt_seq.define_sequence("phone", phone_steps)
     
     print("   Work sequence: READ -> THINK -> WRITE -> TYPE -> THINK -> WRITE")
     print("   Phone sequence: HEAR_RING -> PICK_UP -> SAY_HELLO -> LISTEN -> RESPOND -> HANG_UP")
@@ -457,9 +452,7 @@ def demonstrate_interruption_handling():
             print("\n   [INTERRUPTION: Phone rings!]")
             
             # Save current state
-            current = main_seq.get_current_step("work")
-            saved_state.state = current
-            saved_position = main_seq.sequences["work"]["position"]
+            saved_position = main_seq.sequence_index
             
             # Mark interruption
             status.state = vocab["INTERRUPTED"].vector
@@ -469,49 +462,33 @@ def demonstrate_interruption_handling():
             interrupt_seq.start_sequence("phone")
         
         # Execute appropriate sequence
-        if status.get_semantic_pointer(vocab).similarity(vocab["INTERRUPTED"]) > 0.5:
+        status_ptr = SemanticPointer(status.state, vocabulary=vocab)
+        
+        if status_ptr.similarity(vocab["INTERRUPTED"]) > 0.5:
             # Handle interruption
-            if not interrupt_seq.is_sequence_complete("phone"):
-                current = interrupt_seq.get_current_step("phone")
-                if current is not None:
-                    action.state = current
-                    act_ptr = action.get_semantic_pointer(vocab)
-                    
-                    # Find action
-                    for act in phone_actions:
-                        if act_ptr.similarity(vocab[act]) > 0.5:
-                            print(f"   Step {step + 1}: {act} (interrupt)")
-                            break
-                    
-                    interrupt_seq.advance_sequence("phone")
+            current = interrupt_seq.next_step()
+            if current is not None:
+                action.state = vocab[current].vector
+                print(f"   Step {step + 1}: {current} (interrupt)")
             else:
                 # Interruption complete, resume main task
                 print("\n   [RESUMING MAIN TASK]")
                 status.state = vocab["RESUMING"].vector
                 
                 # Restore position
-                main_seq.sequences["work"]["position"] = saved_position
+                main_seq.sequence_index = saved_position
         
-        elif status.get_semantic_pointer(vocab).similarity(vocab["RESUMING"]) > 0.5:
+        elif status_ptr.similarity(vocab["RESUMING"]) > 0.5:
             # Transition back to working
             status.state = vocab["WORKING"].vector
             print(f"   Resumed at position {saved_position}")
         
         else:
             # Normal work sequence
-            if not main_seq.is_sequence_complete("work"):
-                current = main_seq.get_current_step("work")
-                if current is not None:
-                    action.state = current
-                    act_ptr = action.get_semantic_pointer(vocab)
-                    
-                    # Find action
-                    for act in task_actions:
-                        if act_ptr.similarity(vocab[act]) > 0.5:
-                            print(f"   Step {step + 1}: {act}")
-                            break
-                    
-                    main_seq.advance_sequence("work")
+            current = main_seq.next_step()
+            if current is not None:
+                action.state = vocab[current].vector
+                print(f"   Step {step + 1}: {current}")
             else:
                 print("\n   Main task complete!")
                 break
@@ -541,7 +518,7 @@ def demonstrate_temporal_patterns():
     # Create modules
     note_state = State("note", 256)
     duration_state = State("duration", 256)
-    pattern_memory = Memory("patterns", 256, capacity=20)
+    pattern_memory = Memory("patterns", 256, vocab=vocab, capacity=20)
     
     print("\n1. Learning Musical Patterns:")
     
@@ -646,19 +623,20 @@ def visualize_sequence_execution():
         vocab.create_pointer(act)
     
     # Create sequence
-    sequencer = Sequencing()
-    sequence = [vocab[act].vector for act in actions]
-    sequencer.define_sequence("demo", sequence)
+    config = SPAConfig(dimension=128)
+    sequencer = Sequencing(128, config, vocab)
+    sequencer.define_sequence("demo", actions)
     
     # Track states over time
     states = []
     sequencer.start_sequence("demo")
     
-    while not sequencer.is_sequence_complete("demo"):
-        current = sequencer.get_current_step("demo")
-        if current is not None:
-            states.append(current)
-        sequencer.advance_sequence("demo")
+    while True:
+        current = sequencer.next_step()
+        if current is None:
+            break
+        if isinstance(current, str):
+            states.append(vocab[current].vector)
     
     print("\n1. Sequence State Evolution:")
     

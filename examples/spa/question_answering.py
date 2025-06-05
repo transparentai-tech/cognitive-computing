@@ -18,8 +18,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from cognitive_computing.spa import (
     SPAConfig, Vocabulary, SemanticPointer,
-    State, Memory, AssociativeMemory, Buffer,
-    ProductionSystem, Production, Condition, Effect,
+    State, Memory, Buffer,
+    ProductionSystem, Production, MatchCondition, SetEffect, CompoundCondition,
     create_spa
 )
 from cognitive_computing.spa.visualizations import (
@@ -33,8 +33,8 @@ class KnowledgeBase:
     def __init__(self, vocab: Vocabulary, capacity: int = 100):
         """Initialize knowledge base."""
         self.vocab = vocab
-        self.facts = Memory("facts", vocab.dimension, capacity=capacity)
-        self.relations = Memory("relations", vocab.dimension, capacity=capacity)
+        self.facts = Memory("facts", vocab.dimension, vocab=vocab, capacity=capacity)
+        self.relations = Memory("relations", vocab.dimension, vocab=vocab, capacity=capacity)
         
         # Common relation types
         self._init_relations()
@@ -48,14 +48,14 @@ class KnowledgeBase:
         ]
         
         for rel in relations:
-            if rel not in self.vocab:
+            if rel not in self.vocab.pointers:
                 self.vocab.create_pointer(rel)
     
     def add_fact(self, subject: str, relation: str, object: str):
         """Add a fact to the knowledge base."""
         # Ensure all components exist in vocabulary
         for item in [subject, relation, object]:
-            if item not in self.vocab:
+            if item not in self.vocab.pointers:
                 self.vocab.create_pointer(item)
         
         # Encode fact as: subject * relation * object
@@ -138,7 +138,8 @@ def demonstrate_simple_qa():
     # Create Q&A modules
     question = State("question", 512)
     answer = State("answer", 512)
-    confidence = State("confidence", 1)  # Scalar confidence
+    # Use a simple float for confidence instead of State
+    confidence_value = 0.0
     
     print("\n1. Direct Fact Retrieval:")
     
@@ -152,31 +153,25 @@ def demonstrate_simple_qa():
     # Process: Unbind WHAT to get CAPITAL_OF * FRANCE
     query = q1 * ~vocab["WHAT"]
     
-    # Look up in knowledge base
-    facts = kb.query(query.vector)
+    # Look up in knowledge base by searching for FRANCE
+    fact_vector = kb.facts.recall(vocab["FRANCE"].vector)
     
-    if facts:
+    if fact_vector is not None:
         # The fact is encoded as PARIS * CAPITAL_OF * FRANCE
         # To get PARIS, unbind CAPITAL_OF and FRANCE
-        fact_vector = kb.facts.recall(query.vector)
-        answer_vec = fact_vector
+        temp = SemanticPointer(fact_vector, vocabulary=vocab)
+        # Unbind FRANCE and CAPITAL_OF to get PARIS
+        temp = temp * ~vocab["FRANCE"] * ~vocab["CAPITAL_OF"]
         
-        # Try to extract the answer
-        for unbind_seq in [
-            [~vocab["CAPITAL_OF"], ~vocab["FRANCE"]],
-            [~vocab["FRANCE"], ~vocab["CAPITAL_OF"]]
-        ]:
-            temp = SemanticPointer(answer_vec, vocabulary=vocab)
-            for unbind in unbind_seq:
-                temp = temp * unbind
-            
-            matches = vocab.cleanup(temp.vector, top_n=3)
-            for name, sim in matches:
-                if sim > 0.3 and name not in ["CAPITAL_OF", "FRANCE", "WHAT"]:
-                    print(f"   Answer: {name} (confidence: {sim:.2f})")
-                    answer.state = vocab[name].vector
-                    confidence.state = np.array([sim])
-                    break
+        matches = vocab.cleanup(temp.vector, top_n=3)
+        for name, sim in matches:
+            if sim > 0.3 and name not in ["CAPITAL_OF", "FRANCE", "WHAT"]:
+                print(f"   Answer: {name} (confidence: {sim:.2f})")
+                answer.state = vocab[name].vector
+                confidence_value = sim
+                break
+    else:
+        print("   Could not retrieve fact from knowledge base")
     
     # Question 2: Who created relativity?
     print("\n2. Who Questions:")
@@ -186,13 +181,10 @@ def demonstrate_simple_qa():
     
     print("   Question: Who created relativity?")
     
-    # Process similarly
-    query = q2 * ~vocab["WHO"]
-    facts = kb.query(vocab["RELATIVITY"].vector)  # Search by object
+    # Process similarly - search by RELATIVITY
+    fact_vector = kb.facts.recall(vocab["RELATIVITY"].vector)
     
-    if facts:
-        fact_vector = kb.facts.recall(vocab["RELATIVITY"].vector)
-        
+    if fact_vector is not None:
         # Extract subject from fact
         temp = SemanticPointer(fact_vector, vocabulary=vocab)
         temp = temp * ~vocab["CREATED_BY"] * ~vocab["RELATIVITY"]
@@ -201,6 +193,8 @@ def demonstrate_simple_qa():
         for name, sim in matches:
             if sim > 0.3 and name not in ["CREATED_BY", "RELATIVITY", "WHO"]:
                 print(f"   Answer: {name} (confidence: {sim:.2f})")
+    else:
+        print("   Could not retrieve fact from knowledge base")
     
     return vocab, kb, question, answer
 
@@ -226,12 +220,10 @@ def demonstrate_complex_qa():
     print("   Requires: EIFFEL_TOWER -> location -> PARIS -> country")
     
     # Step 1: Find location of Eiffel Tower
-    query1 = vocab["EIFFEL_TOWER"]
-    facts1 = kb.query(query1.vector)
+    fact_vector = kb.facts.recall(vocab["EIFFEL_TOWER"].vector)
     
     # Extract PARIS from EIFFEL_TOWER * LOCATION * PARIS
-    if facts1:
-        fact_vector = kb.facts.recall(query1.vector)
+    if fact_vector is not None:
         temp = SemanticPointer(fact_vector, vocabulary=vocab)
         temp = temp * ~vocab["EIFFEL_TOWER"] * ~vocab["LOCATION"]
         
@@ -241,11 +233,9 @@ def demonstrate_complex_qa():
             print(f"   Step 1: EIFFEL_TOWER is in {location}")
             
             # Step 2: Find what country PARIS is capital of
-            query2 = vocab[location]
-            facts2 = kb.query(query2.vector)
+            fact_vector2 = kb.facts.recall(vocab[location].vector)
             
-            if facts2:
-                fact_vector2 = kb.facts.recall(query2.vector)
+            if fact_vector2 is not None:
                 temp2 = SemanticPointer(fact_vector2, vocabulary=vocab)
                 temp2 = temp2 * ~vocab[location] * ~vocab["CAPITAL_OF"]
                 
@@ -254,6 +244,8 @@ def demonstrate_complex_qa():
                     country = matches2[0][0]
                     print(f"   Step 2: {location} is capital of {country}")
                     print(f"   Answer: {country}")
+    else:
+        print("   Could not find Eiffel Tower location")
     
     # Question with inference
     print("\n2. Inference-Based Answering:")
@@ -271,15 +263,15 @@ def demonstrate_complex_qa():
     chain = []
     
     # EIFFEL_TOWER -> PARIS
-    if kb.query(vocab["EIFFEL_TOWER"].vector):
+    if kb.facts.recall(vocab["EIFFEL_TOWER"].vector) is not None:
         chain.append("EIFFEL_TOWER in PARIS")
     
     # PARIS -> FRANCE  
-    if kb.query(vocab["EIFFEL_TOWER"].vector):
+    if kb.facts.recall(vocab["PARIS"].vector) is not None:
         chain.append("PARIS capital of FRANCE")
         
     # FRANCE -> EUROPE
-    if kb.query(vocab["EIFFEL_TOWER"].vector):
+    if kb.facts.recall(vocab["FRANCE"].vector) is not None:
         chain.append("FRANCE part of EUROPE")
     
     if len(chain) == 3:
@@ -287,6 +279,8 @@ def demonstrate_complex_qa():
         for step in chain:
             print(f"   - {step}")
         print("   Answer: YES (by transitive inference)")
+    else:
+        print("   Could not complete inference chain")
     
     return vocab, kb
 
@@ -298,7 +292,7 @@ def demonstrate_learning_qa():
     vocab, kb = create_qa_system()
     
     # Track question-answer pairs for learning
-    qa_memory = AssociativeMemory("qa_pairs", 512, capacity=50)
+    qa_memory = Memory("qa_pairs", 512, vocab=vocab, capacity=50)
     
     print("\n1. Learning from Corrections:")
     
@@ -343,13 +337,17 @@ def demonstrate_learning_qa():
     # Test pattern
     print("\n   Q: Is London a city?")
     
-    query = vocab["LONDON"]
-    facts = kb.query(query.vector)
-    
-    for fact, sim in facts:
-        if "IS_A" in str(fact) and "CITY" in str(fact):
-            print("   Answer: YES (learned from pattern)")
-            break
+    # Check if LONDON is a CITY
+    fact_vector = kb.facts.recall(vocab["LONDON"].vector)
+    if fact_vector is not None:
+        # Try to check if it contains IS_A CITY pattern
+        temp = SemanticPointer(fact_vector, vocabulary=vocab)
+        temp = temp * ~vocab["LONDON"] * ~vocab["IS_A"]
+        matches = vocab.cleanup(temp.vector, top_n=3)
+        for name, sim in matches:
+            if name == "CITY" and sim > 0.3:
+                print("   Answer: YES (learned from pattern)")
+                break
     
     print("\n3. Confidence Adjustment:")
     
@@ -408,52 +406,41 @@ def demonstrate_question_types():
     print("\n1. Question Type Detection:")
     
     # Rules for different question types
+    # Create a custom effect for printing
+    class PrintEffect(SetEffect):
+        def __init__(self, message):
+            self.message = message
+            self.module_name = "dummy"
+            self.value = "dummy"
+        
+        def execute(self, context):
+            print(self.message)
+        
+        def __repr__(self):
+            return f"PrintEffect('{self.message}')"
+    
     what_rule = Production(
         name="handle_what",
-        condition=Condition(
-            lambda: question.get_semantic_pointer(vocab).similarity(vocab["WHAT"]) > 0.5,
-            "question starts with WHAT"
-        ),
-        effect=Effect(
-            lambda: print("   -> Handling WHAT question (seeking identity/property)"),
-            "route to property handler"
-        )
+        condition=MatchCondition("question", "WHAT", threshold=0.5),
+        effect=PrintEffect("   -> Handling WHAT question (seeking identity/property)")
     )
     
     where_rule = Production(
         name="handle_where",
-        condition=Condition(
-            lambda: question.get_semantic_pointer(vocab).similarity(vocab["WHERE"]) > 0.5,
-            "question starts with WHERE"  
-        ),
-        effect=Effect(
-            lambda: print("   -> Handling WHERE question (seeking location)"),
-            "route to location handler"
-        )
+        condition=MatchCondition("question", "WHERE", threshold=0.5),
+        effect=PrintEffect("   -> Handling WHERE question (seeking location)")
     )
     
     when_rule = Production(
         name="handle_when",
-        condition=Condition(
-            lambda: question.get_semantic_pointer(vocab).similarity(vocab["WHEN"]) > 0.5,
-            "question starts with WHEN"
-        ),
-        effect=Effect(
-            lambda: print("   -> Handling WHEN question (seeking time)"),
-            "route to temporal handler"
-        )
+        condition=MatchCondition("question", "WHEN", threshold=0.5),
+        effect=PrintEffect("   -> Handling WHEN question (seeking time)")
     )
     
     why_rule = Production(
         name="handle_why", 
-        condition=Condition(
-            lambda: question.get_semantic_pointer(vocab).similarity(vocab["WHY"]) > 0.5,
-            "question starts with WHY"
-        ),
-        effect=Effect(
-            lambda: print("   -> Handling WHY question (seeking cause)"),
-            "route to causal handler"
-        )
+        condition=MatchCondition("question", "WHY", threshold=0.5),
+        effect=PrintEffect("   -> Handling WHY question (seeking cause)")
     )
     
     ps.add_production(what_rule)
@@ -461,11 +448,13 @@ def demonstrate_question_types():
     ps.add_production(when_rule)
     ps.add_production(why_rule)
     
-    ps.set_context({
-        "question": question,
-        "answer": answer,
-        "vocab": vocab
-    })
+    ps.set_context(
+        modules={
+            "question": question,
+            "answer": answer
+        },
+        vocab=vocab
+    )
     
     # Test different question types
     test_questions = [
@@ -480,7 +469,9 @@ def demonstrate_question_types():
         question.state = q_vec.vector
         
         print(f"\n   Question: {q_word} {relation.lower().replace('_', ' ')} {topic}?")
-        ps.step()
+        selected = ps.select_production()
+        if selected:
+            selected.fire(ps._context)
     
     print("\n2. Answer Strategies by Type:")
     
@@ -523,7 +514,7 @@ def demonstrate_question_types():
     query = vocab["FLOOD"]
     # Search what causes floods
     for topic in ["RAIN", "STORM", "HURRICANE"]:
-        if topic in vocab:
+        if topic in vocab.pointers:
             test_fact = vocab[topic] * vocab["CAUSES"] * vocab["FLOOD"]
             sim = kb.facts.recall(vocab[topic].vector)
             if sim is not None:
@@ -549,7 +540,7 @@ def visualize_qa_system():
     
     # Ensure all concepts are in vocabulary
     for concept in concepts:
-        if concept not in vocab:
+        if concept not in vocab.pointers:
             vocab.create_pointer(concept)
     
     print("\n1. Concept Similarity Matrix:")
