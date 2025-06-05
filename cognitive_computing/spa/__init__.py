@@ -70,6 +70,14 @@ from .production import (
     parse_production_rules,
 )
 
+# Control imports
+from .control import (
+    CognitiveControl,
+    Routing,
+    Gating,
+    Sequencing,
+)
+
 __all__ = [
     # Core
     "SPAConfig",
@@ -117,4 +125,9 @@ __all__ = [
     "ProductionSystem",
     "ConditionalModule",
     "parse_production_rules",
+    # Control
+    "CognitiveControl",
+    "Routing",
+    "Gating",
+    "Sequencing",
 ]
