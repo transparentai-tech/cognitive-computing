@@ -78,6 +78,18 @@ from .control import (
     Sequencing,
 )
 
+# Compiler imports
+from .compiler import (
+    ModuleSpec,
+    ConnectionSpec,
+    ActionSpec,
+    SPAModel,
+    ModelBuilder,
+    compile_model,
+    parse_actions,
+    optimize_network,
+)
+
 __all__ = [
     # Core
     "SPAConfig",
@@ -130,4 +142,13 @@ __all__ = [
     "Routing",
     "Gating",
     "Sequencing",
+    # Compiler
+    "ModuleSpec",
+    "ConnectionSpec",
+    "ActionSpec",
+    "SPAModel",
+    "ModelBuilder",
+    "compile_model",
+    "parse_actions",
+    "optimize_network",
 ]
