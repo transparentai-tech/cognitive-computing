@@ -32,6 +32,17 @@ from .modules import (
     Connection,
 )
 
+# Action imports
+from .actions import (
+    Action,
+    ActionRule,
+    ActionSet,
+    BasalGanglia,
+    Thalamus,
+    Cortex,
+    ActionSelection,
+)
+
 __all__ = [
     # Core
     "SPAConfig",
@@ -50,4 +61,12 @@ __all__ = [
     "Compare",
     "DotProduct",
     "Connection",
+    # Actions
+    "Action",
+    "ActionRule",
+    "ActionSet",
+    "BasalGanglia",
+    "Thalamus",
+    "Cortex",
+    "ActionSelection",
 ]
