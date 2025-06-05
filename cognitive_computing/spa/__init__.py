@@ -43,6 +43,17 @@ from .actions import (
     ActionSelection,
 )
 
+# Network imports
+from .networks import (
+    NeuronParams,
+    Ensemble,
+    EnsembleArray,
+    Connection as NetworkConnection,
+    Probe,
+    Network,
+    CircularConvolution,
+)
+
 __all__ = [
     # Core
     "SPAConfig",
@@ -69,4 +80,12 @@ __all__ = [
     "Thalamus",
     "Cortex",
     "ActionSelection",
+    # Networks
+    "NeuronParams",
+    "Ensemble",
+    "EnsembleArray",
+    "NetworkConnection",
+    "Probe",
+    "Network",
+    "CircularConvolution",
 ]
