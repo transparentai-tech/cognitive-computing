@@ -17,10 +17,12 @@ implementation through SPA's semantic pointer architecture.
 import numpy as np
 import matplotlib.pyplot as plt
 from cognitive_computing.spa import (
-    SPAConfig, Vocabulary,
+    SPAConfig, Vocabulary, SemanticPointer,
     State, Memory, Buffer,
     Production, ProductionSystem, 
-    Condition, Effect, ConditionalModule,
+    Condition, MatchCondition, CompareCondition, CompoundCondition,
+    Effect, SetEffect, BindEffect, CompoundEffect,
+    ConditionalModule,
     parse_production_rules
 )
 from cognitive_computing.spa.visualizations import visualize_production_flow
@@ -62,64 +64,52 @@ def create_animal_classification_system():
     print("\n1. Defining Classification Rules:")
     
     # Rule 1: If has fur and gives milk, then mammal
+    fur_condition = MatchCondition("observation", "HAS_FUR", threshold=0.5)
+    milk_condition = MatchCondition("observation", "GIVES_MILK", threshold=0.5)
+    mammal_condition = CompoundCondition([fur_condition, milk_condition], "and")
+    
     rule1 = Production(
         name="classify_mammal",
-        condition=Condition(
-            lambda: observation.get_semantic_pointer(vocab).similarity(vocab["HAS_FUR"]) > 0.5 and
-                   observation.get_semantic_pointer(vocab).similarity(vocab["GIVES_MILK"]) > 0.5,
-            "has fur AND gives milk"
-        ),
-        effect=Effect(
-            lambda: setattr(classification, 'state', vocab["MAMMAL"].vector),
-            "classify as MAMMAL"
-        ),
+        condition=mammal_condition,
+        effect=SetEffect("classification", "MAMMAL"),
         priority=1.0
     )
     
     # Rule 2: If has feathers and has wings, then bird
+    feathers_condition = MatchCondition("observation", "HAS_FEATHERS", threshold=0.5)
+    wings_condition = MatchCondition("observation", "HAS_WINGS", threshold=0.5)
+    bird_condition = CompoundCondition([feathers_condition, wings_condition], "and")
+    
     rule2 = Production(
         name="classify_bird",
-        condition=Condition(
-            lambda: observation.get_semantic_pointer(vocab).similarity(vocab["HAS_FEATHERS"]) > 0.5 and
-                   observation.get_semantic_pointer(vocab).similarity(vocab["HAS_WINGS"]) > 0.5,
-            "has feathers AND has wings"
-        ),
-        effect=Effect(
-            lambda: setattr(classification, 'state', vocab["BIRD"].vector),
-            "classify as BIRD"
-        ),
+        condition=bird_condition,
+        effect=SetEffect("classification", "BIRD"),
         priority=1.0
     )
     
     # Rule 3: If has scales and cold-blooded, then reptile
+    scales_condition = MatchCondition("observation", "HAS_SCALES", threshold=0.5)
+    cold_condition = MatchCondition("observation", "COLD_BLOODED", threshold=0.5)
+    reptile_condition = CompoundCondition([scales_condition, cold_condition], "and")
+    
     rule3 = Production(
         name="classify_reptile",
-        condition=Condition(
-            lambda: observation.get_semantic_pointer(vocab).similarity(vocab["HAS_SCALES"]) > 0.5 and
-                   observation.get_semantic_pointer(vocab).similarity(vocab["COLD_BLOODED"]) > 0.5,
-            "has scales AND cold-blooded"
-        ),
-        effect=Effect(
-            lambda: setattr(classification, 'state', vocab["REPTILE"].vector),
-            "classify as REPTILE"
-        ),
+        condition=reptile_condition,
+        effect=SetEffect("classification", "REPTILE"),
         priority=1.0
     )
     
     # More specific rules (higher priority)
     
-    # Rule 4: If mammal and barks, then dog
+    # Rule 4: If mammal and walks, then dog
+    is_mammal = MatchCondition("classification", "MAMMAL", threshold=0.5)
+    walks = MatchCondition("observation", "WALKS", threshold=0.5)
+    dog_condition = CompoundCondition([is_mammal, walks], "and")
+    
     rule4 = Production(
         name="identify_dog",
-        condition=Condition(
-            lambda: classification.get_semantic_pointer(vocab).similarity(vocab["MAMMAL"]) > 0.5 and
-                   observation.get_semantic_pointer(vocab).similarity(vocab["WALKS"]) > 0.5,
-            "is mammal AND walks"
-        ),
-        effect=Effect(
-            lambda: setattr(classification, 'state', (vocab["DOG"] + vocab["MAMMAL"]).normalize().vector),
-            "identify as DOG"
-        ),
+        condition=dog_condition,
+        effect=SetEffect("classification", "DOG"),
         priority=2.0  # Higher priority for specific identification
     )
     
@@ -132,12 +122,14 @@ def create_animal_classification_system():
     print(f"   Added {len(ps.productions)} classification rules")
     
     # Set context
-    ps.set_context({
-        "observation": observation,
-        "classification": classification,
-        "memory": memory,
-        "vocab": vocab
-    })
+    ps.set_context(
+        modules={
+            "observation": observation,
+            "classification": classification,
+            "memory": memory
+        },
+        vocab=vocab
+    )
     
     return ps, observation, classification, vocab
 
@@ -160,12 +152,13 @@ def demonstrate_forward_chaining():
     print("   Running inference...")
     
     # Step through production system
-    fired = ps.step()
-    if fired:
-        print(f"   Fired: {fired.name}")
+    selected = ps.select_production()
+    if selected:
+        print(f"   Fired: {selected.name}")
+        selected.fire(ps._context)
         
         # Check classification
-        result = classification.get_semantic_pointer(vocab)
+        result = SemanticPointer(classification.state, vocabulary=vocab)
         matches = vocab.cleanup(result.vector, top_n=3)
         print("   Classification:")
         for name, sim in matches:
@@ -180,11 +173,12 @@ def demonstrate_forward_chaining():
     observation.state = obs.normalize().vector
     
     print("   Observations: HAS_FEATHERS, HAS_WINGS, LAYS_EGGS")
-    fired = ps.step()
-    if fired:
-        print(f"   Fired: {fired.name}")
+    selected = ps.select_production()
+    if selected:
+        print(f"   Fired: {selected.name}")
+        selected.fire(ps._context)
         
-        result = classification.get_semantic_pointer(vocab)
+        result = SemanticPointer(classification.state, vocabulary=vocab)
         matches = vocab.cleanup(result.vector, top_n=3)
         print("   Classification:")
         for name, sim in matches:
@@ -202,11 +196,12 @@ def demonstrate_forward_chaining():
     
     # Run multiple cycles
     for cycle in range(3):
-        fired = ps.step()
-        if fired:
-            print(f"   Cycle {cycle + 1}: Fired {fired.name}")
+        selected = ps.select_production()
+        if selected:
+            print(f"   Cycle {cycle + 1}: Fired {selected.name}")
+            selected.fire(ps._context)
             
-            result = classification.get_semantic_pointer(vocab)
+            result = SemanticPointer(classification.state, vocabulary=vocab)
             matches = vocab.cleanup(result.vector, top_n=2)
             if matches:
                 print(f"   Current classification: {matches[0][0]}")
@@ -238,42 +233,35 @@ def demonstrate_conflict_resolution():
     # Rule 1: A -> Response 1
     rule1 = Production(
         name="a_to_1",
-        condition=Condition(
-            lambda: input_state.get_semantic_pointer(vocab).similarity(vocab["STIMULUS_A"]) > 0.5,
-            "stimulus is A"
-        ),
-        effect=Effect(
-            lambda: setattr(output_state, 'state', vocab["RESPONSE_1"].vector),
-            "respond with 1"
-        ),
+        condition=MatchCondition("input", "STIMULUS_A", threshold=0.5),
+        effect=SetEffect("output", "RESPONSE_1"),
         priority=1.0,
-        specificity=1  # General rule
+        # specificity=1  # General rule
     )
     
     # Rule 2: A + Urgent -> Response 2
+    a_cond = MatchCondition("input", "STIMULUS_A", threshold=0.5)
+    urgent_cond = MatchCondition("input", "URGENT", threshold=0.5)
+    a_urgent_cond = CompoundCondition([a_cond, urgent_cond], "and")
+    
     rule2 = Production(
         name="a_urgent_to_2",
-        condition=Condition(
-            lambda: input_state.get_semantic_pointer(vocab).similarity(vocab["STIMULUS_A"]) > 0.5 and
-                   input_state.get_semantic_pointer(vocab).similarity(vocab["URGENT"]) > 0.5,
-            "stimulus is A AND urgent"
-        ),
-        effect=Effect(
-            lambda: setattr(output_state, 'state', vocab["RESPONSE_2"].vector),
-            "respond with 2"
-        ),
+        condition=a_urgent_cond,
+        effect=SetEffect("output", "RESPONSE_2"),
         priority=1.0,
-        specificity=2  # More specific rule
+        # specificity=2  # More specific rule
     )
     
     ps.add_production(rule1)
     ps.add_production(rule2)
     
-    ps.set_context({
-        "input": input_state,
-        "output": output_state,
-        "vocab": vocab
-    })
+    ps.set_context(
+        modules={
+            "input": input_state,
+            "output": output_state
+        },
+        vocab=vocab
+    )
     
     print("   Rule 1: IF A THEN Response_1 (specificity=1)")
     print("   Rule 2: IF A AND Urgent THEN Response_2 (specificity=2)")
@@ -289,9 +277,9 @@ def demonstrate_conflict_resolution():
         print(f"   - {prod.name}: utility={util:.3f}")
     
     # Resolve conflict
-    fired = ps.step()
-    if fired:
-        print(f"   Winner: {fired.name} (by priority/specificity)")
+    selected = ps.select_production()
+    if selected:
+        print(f"   Winner: {selected.name} (by priority/specificity)")
     
     # Test with A + Urgent
     print("\n3. Test with A + Urgent:")
@@ -302,24 +290,27 @@ def demonstrate_conflict_resolution():
     for prod, util in utilities:
         print(f"   - {prod.name}: utility={util:.3f}")
     
-    fired = ps.step()
-    if fired:
-        print(f"   Winner: {fired.name} (more specific)")
+    selected = ps.select_production()
+    if selected:
+        print(f"   Winner: {selected.name} (more specific)")
     
     # Demonstrate priority-based resolution
     print("\n4. Priority-Based Resolution:")
     
     # Add high-priority override rule
+    # For the effect, we'll create a custom class
+    class PrintEffect(Effect):
+        def __init__(self, message):
+            self.message = message
+        def execute(self, context):
+            print(self.message)
+        def __repr__(self):
+            return f"Print('{self.message}')"
+    
     rule3 = Production(
         name="emergency_override",
-        condition=Condition(
-            lambda: input_state.get_semantic_pointer(vocab).similarity(vocab["URGENT"]) > 0.7,
-            "very urgent"
-        ),
-        effect=Effect(
-            lambda: print("   EMERGENCY OVERRIDE ACTIVATED"),
-            "emergency response"
-        ),
+        condition=MatchCondition("input", "URGENT", threshold=0.7),
+        effect=PrintEffect("   EMERGENCY OVERRIDE ACTIVATED"),
         priority=10.0  # High priority
     )
     
@@ -329,10 +320,10 @@ def demonstrate_conflict_resolution():
     print("   Added emergency rule with priority=10.0")
     input_state.state = vocab["URGENT"].vector
     
-    fired = ps.step()
-    if fired:
-        print(f"   Winner: {fired.name} (highest priority)")
-        fired.execute()
+    selected = ps.select_production()
+    if selected:
+        print(f"   Winner: {selected.name} (highest priority)")
+        selected.fire(ps._context)
     
     return ps, vocab
 
@@ -362,6 +353,27 @@ def demonstrate_learning_productions():
     
     print("\n1. Initial Rules with Strengths:")
     
+    # Create a custom learning condition class
+    class LearningCondition(Condition):
+        def __init__(self, module_name, pattern, strength=1.0):
+            self.module_name = module_name
+            self.pattern = pattern
+            self.strength = strength
+            
+        def evaluate(self, context):
+            modules = context.get('modules', {})
+            vocab = context.get('vocab')
+            if self.module_name not in modules or vocab is None:
+                return 0.0
+            module = modules[self.module_name]
+            pattern_vec = vocab[self.pattern].vector
+            sp = SemanticPointer(module.state, vocabulary=vocab)
+            similarity = sp.similarity(SemanticPointer(pattern_vec, vocabulary=vocab))
+            return similarity * self.strength
+            
+        def __repr__(self):
+            return f"LearningCondition({self.module_name}, {self.pattern}, strength={self.strength:.2f})"
+    
     # Create rules with initial strengths
     rules_data = [
         ("see_food_approach", "SEE_FOOD", "APPROACH", 0.5),
@@ -376,25 +388,21 @@ def demonstrate_learning_productions():
     for name, cond, act, strength in rules_data:
         rule = Production(
             name=name,
-            condition=Condition(
-                lambda c=cond, s=strength: perception.get_semantic_pointer(vocab).similarity(vocab[c]) * s,
-                f"perceive {cond}"
-            ),
-            effect=Effect(
-                lambda a=act: setattr(action, 'state', vocab[a].vector),
-                f"action {act}"
-            )
+            condition=LearningCondition("perception", cond, strength),
+            effect=SetEffect("action", act)
         )
         ps.add_production(rule)
         rule_strengths[name] = strength
         print(f"   {name}: strength={strength:.2f}")
     
-    ps.set_context({
-        "perception": perception,
-        "action": action,
-        "outcome": outcome,
-        "vocab": vocab
-    })
+    ps.set_context(
+        modules={
+            "perception": perception,
+            "action": action,
+            "outcome": outcome
+        },
+        vocab=vocab
+    )
     
     # Simulate learning trials
     print("\n2. Learning from Experience:")
@@ -410,7 +418,7 @@ def demonstrate_learning_productions():
     print(f"   Selected: {winner.name}")
     
     # Execute and get outcome
-    winner.execute()
+    winner.fire(ps._context)
     outcome.state = vocab["REWARD"].vector
     
     # Update strength based on outcome
@@ -426,13 +434,11 @@ def demonstrate_learning_productions():
     # Update conditions with new strengths
     for prod in ps.productions:
         if prod.name in rule_strengths:
-            # Create new condition with updated strength
+            # Update condition strength
             if "see_food" in prod.name:
                 s = rule_strengths[prod.name]
-                prod.condition = Condition(
-                    lambda s=s: perception.get_semantic_pointer(vocab).similarity(vocab["SEE_FOOD"]) * s,
-                    f"perceive SEE_FOOD (strength={s:.2f})"
-                )
+                if isinstance(prod.condition, LearningCondition):
+                    prod.condition.strength = s
     
     utilities = ps.evaluate_all()
     print("   Updated utilities:")
@@ -461,18 +467,8 @@ def demonstrate_learning_productions():
         
         # Update rule conditions
         for prod in ps.productions:
-            if "see_food_approach" in prod.name:
-                s = rule_strengths["see_food_approach"]
-                prod.condition = Condition(
-                    lambda s=s: perception.get_semantic_pointer(vocab).similarity(vocab["SEE_FOOD"]) * s,
-                    f"strength={s:.2f}"
-                )
-            elif "see_food_wait" in prod.name:
-                s = rule_strengths["see_food_wait"]
-                prod.condition = Condition(
-                    lambda s=s: perception.get_semantic_pointer(vocab).similarity(vocab["SEE_FOOD"]) * s,
-                    f"strength={s:.2f}"
-                )
+            if prod.name in rule_strengths and isinstance(prod.condition, LearningCondition):
+                prod.condition.strength = rule_strengths[prod.name]
         
         # Record strengths
         learning_history["approach"].append(rule_strengths["see_food_approach"])
@@ -538,7 +534,7 @@ def demonstrate_production_parsing():
     # Parse rules
     print("\n2. Parsing Rules:")
     
-    productions = parse_production_rules(rule_text, {"state": state, "action": action}, vocab)
+    productions = parse_production_rules(rule_text, vocab)
     
     print(f"   Parsed {len(productions)} production rules")
     
@@ -546,13 +542,15 @@ def demonstrate_production_parsing():
     ps = ProductionSystem()
     for prod in productions:
         ps.add_production(prod)
-        print(f"   - {prod.name}: {prod.condition.description}")
+        print(f"   - {prod.name}: {prod.condition}")
     
-    ps.set_context({
-        "state": state,
-        "action": action,
-        "vocab": vocab
-    })
+    ps.set_context(
+        modules={
+            "state": state,
+            "action": action
+        },
+        vocab=vocab
+    )
     
     # Test the parsed rules
     print("\n3. Testing Parsed Rules:")
@@ -561,10 +559,11 @@ def demonstrate_production_parsing():
     print("\n   Scenario 1: Student with upcoming exam")
     state.state = (vocab["STUDENT"] + vocab["EXAM_SOON"]).normalize().vector
     
-    fired = ps.step()
-    if fired:
-        print(f"   Fired: {fired.name}")
-        result = action.get_semantic_pointer(vocab)
+    selected = ps.select_production()
+    if selected:
+        print(f"   Fired: {selected.name}")
+        selected.fire(ps._context)
+        result = SemanticPointer(action.state, vocabulary=vocab)
         matches = vocab.cleanup(result.vector, top_n=1)
         if matches:
             print(f"   Action: {matches[0][0]}")
@@ -573,10 +572,11 @@ def demonstrate_production_parsing():
     print("\n   Scenario 2: Very tired")
     state.state = vocab["TIRED"].vector
     
-    fired = ps.step()
-    if fired:
-        print(f"   Fired: {fired.name}")
-        result = action.get_semantic_pointer(vocab)
+    selected = ps.select_production()
+    if selected:
+        print(f"   Fired: {selected.name}")
+        selected.fire(ps._context)
+        result = SemanticPointer(action.state, vocabulary=vocab)
         matches = vocab.cleanup(result.vector, top_n=1)
         if matches:
             print(f"   Action: {matches[0][0]} (high priority)")
@@ -592,31 +592,26 @@ def demonstrate_production_analysis():
     ps, observation, classification, vocab = create_animal_classification_system()
     
     # Add more rules for complexity
+    # Create compound conditions for complex rules
+    bird_cond1 = MatchCondition("classification", "BIRD", threshold=0.5)
+    swims_cond = MatchCondition("observation", "SWIMS", threshold=0.5)
+    bird_swims_cond = CompoundCondition([bird_cond1, swims_cond], "and")
+    
+    bird_cond2 = MatchCondition("classification", "BIRD", threshold=0.5)
+    flies_cond = MatchCondition("observation", "FLIES", threshold=0.5)
+    bird_flies_cond = CompoundCondition([bird_cond2, flies_cond], "and")
+    
     extra_rules = [
         Production(
             name="identify_bird_that_swims",
-            condition=Condition(
-                lambda: classification.get_semantic_pointer(vocab).similarity(vocab["BIRD"]) > 0.5 and
-                       observation.get_semantic_pointer(vocab).similarity(vocab["SWIMS"]) > 0.5,
-                "is bird AND swims"
-            ),
-            effect=Effect(
-                lambda: setattr(classification, 'state', vocab["PENGUIN"].vector),
-                "identify as PENGUIN"
-            ),
+            condition=bird_swims_cond,
+            effect=SetEffect("classification", "PENGUIN"),
             priority=2.0
         ),
         Production(
             name="identify_flying_bird",
-            condition=Condition(
-                lambda: classification.get_semantic_pointer(vocab).similarity(vocab["BIRD"]) > 0.5 and
-                       observation.get_semantic_pointer(vocab).similarity(vocab["FLIES"]) > 0.5,
-                "is bird AND flies"
-            ),
-            effect=Effect(
-                lambda: setattr(classification, 'state', vocab["EAGLE"].vector),
-                "identify as EAGLE"
-            ),
+            condition=bird_flies_cond,
+            effect=SetEffect("classification", "EAGLE"),
             priority=2.0
         )
     ]
@@ -626,11 +621,21 @@ def demonstrate_production_analysis():
     
     # Analyze the system
     print("\n1. Production System Structure:")
-    analysis = analyze_production_system(ps)
+    test_context = {
+        'modules': {
+            'observation': observation,
+            'classification': classification
+        },
+        'vocab': vocab
+    }
+    analysis = analyze_production_system(ps, test_context)
     
     print(f"   Total productions: {analysis['total_productions']}")
-    print(f"   Average priority: {analysis['avg_priority']:.2f}")
-    print(f"   Max chain length: {analysis['max_chain_length']}")
+    if analysis['production_stats']:
+        priorities = [stats['priority'] for stats in analysis['production_stats'].values()]
+        avg_priority = sum(priorities) / len(priorities) if priorities else 0
+        print(f"   Average priority: {avg_priority:.2f}")
+    print(f"   Productions fired: {analysis['productions_fired']}")
     
     print("\n   Production rules by priority:")
     for prod in sorted(ps.productions, key=lambda p: p.priority, reverse=True):
@@ -658,13 +663,14 @@ def demonstrate_production_analysis():
                     print(f"   - {prod.name}: {util:.3f}")
             
             # Execute highest utility
-            fired = ps.step()
-            if fired:
-                executed.append(fired)
-                print(f"   Executed: {fired.name}")
+            selected = ps.select_production()
+            if selected:
+                executed.append(selected)
+                print(f"   Executed: {selected.name}")
+                selected.fire(ps._context)
                 
                 # Check result
-                result = classification.get_semantic_pointer(vocab)
+                result = SemanticPointer(classification.state, vocabulary=vocab)
                 matches = vocab.cleanup(result.vector, top_n=1)
                 if matches:
                     print(f"   Classification: {matches[0][0]}")
@@ -675,19 +681,20 @@ def demonstrate_production_analysis():
     print("\n3. Visualizing Production Flow:")
     
     if executed:
-        fig, ax = visualize_production_flow(ps, executed_productions=executed)
+        executed_names = [prod.name for prod in executed]
+        fig, ax = visualize_production_flow(ps, executed_productions=executed_names)
         plt.title("Production System Execution Flow")
         plt.show()
     
     # Analyze potential cycles
     print("\n4. Checking for Cycles:")
     
-    if "has_cycle" in analysis and analysis["has_cycle"]:
-        print("   WARNING: Potential cycle detected in production rules")
-        if "cycle_rules" in analysis:
-            print("   Rules involved:")
-            for rule in analysis["cycle_rules"]:
-                print(f"   - {rule}")
+    if analysis.get("cycle_detected", False):
+        print(f"   WARNING: Cycle detected with length {analysis.get('cycle_length', 0)}")
+        print("   Firing sequence tail:")
+        seq = analysis.get('firing_sequence', [])
+        if seq:
+            print(f"   - Last 10: {seq[-10:]}")
     else:
         print("   No cycles detected")
     

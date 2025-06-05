@@ -367,7 +367,7 @@ def visualize_production_flow(
         y = rows - row - 1
         
         # Determine color based on execution
-        if prod in executed_set:
+        if prod.name in executed_set:
             color = 'lightgreen'
             edge_color = 'darkgreen'
             edge_width = 3
@@ -391,34 +391,38 @@ def visualize_production_flow(
                 fontsize=10, weight='bold')
         
         # Add condition summary below
-        condition_str = f"IF: {prod.condition.description[:30]}..."
+        condition_str = f"IF: {str(prod.condition)[:30]}..."
         ax.text(x, y - 0.5, condition_str, ha='center', va='center',
                 fontsize=8, style='italic')
         
         # Add effect summary above
-        effect_str = f"THEN: {prod.effect.description[:30]}..."
+        effect_str = f"THEN: {str(prod.effect)[:30]}..."
         ax.text(x, y + 0.5, effect_str, ha='center', va='center',
                 fontsize=8)
     
     # Draw execution order arrows if provided
     if executed_productions and len(executed_productions) > 1:
+        # Create mapping from name to index
+        name_to_idx = {p.name: i for i, p in enumerate(productions)}
+        
         for i in range(len(executed_productions) - 1):
-            prod1 = executed_productions[i]
-            prod2 = executed_productions[i + 1]
+            prod1_name = executed_productions[i]
+            prod2_name = executed_productions[i + 1]
             
             # Find positions
-            idx1 = productions.index(prod1)
-            idx2 = productions.index(prod2)
-            
-            x1 = (idx1 % cols) * 3 + 1
-            y1 = rows - (idx1 // cols) - 1
-            x2 = (idx2 % cols) * 3 + 1
-            y2 = rows - (idx2 // cols) - 1
-            
-            # Draw arrow
-            ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
-                       arrowprops=dict(arrowstyle='->', color='red',
-                                     lw=2, alpha=0.7))
+            if prod1_name in name_to_idx and prod2_name in name_to_idx:
+                idx1 = name_to_idx[prod1_name]
+                idx2 = name_to_idx[prod2_name]
+                
+                x1 = (idx1 % cols) * 3 + 1
+                y1 = rows - (idx1 // cols) - 1
+                x2 = (idx2 % cols) * 3 + 1
+                y2 = rows - (idx2 // cols) - 1
+                
+                # Draw arrow
+                ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
+                           arrowprops=dict(arrowstyle='->', color='red',
+                                         lw=2, alpha=0.7))
     
     # Set axis limits and remove ticks
     ax.set_xlim(-0.5, cols * 3 - 0.5)

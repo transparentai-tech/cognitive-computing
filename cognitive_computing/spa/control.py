@@ -308,7 +308,7 @@ class Routing(Module):
         
     def update(self, dt: float):
         """Update routing gates."""
-        for gate in self.routes.vectoralues():
+        for gate in self.routes.values():
             gate.update(dt)
 
 
