@@ -41,7 +41,7 @@ class CognitiveControl(Module):
         """Initialize cognitive control."""
         super().__init__("CognitiveControl", dimensions)
         self.config = config
-        self.vectorocab = vocab if vocab is not None else Vocabulary(dimensions)
+        self.vocab = vocab if vocab is not None else Vocabulary(dimensions)
         
         # Control signals
         self._attention = np.zeros(dimensions)

@@ -70,7 +70,7 @@ def create_animal_classification_system():
             "has fur AND gives milk"
         ),
         effect=Effect(
-            lambda: classification.set_state(vocab["MAMMAL"].vector),
+            lambda: setattr(classification, 'state', vocab["MAMMAL"].vector),
             "classify as MAMMAL"
         ),
         priority=1.0
@@ -85,7 +85,7 @@ def create_animal_classification_system():
             "has feathers AND has wings"
         ),
         effect=Effect(
-            lambda: classification.set_state(vocab["BIRD"].vector),
+            lambda: setattr(classification, 'state', vocab["BIRD"].vector),
             "classify as BIRD"
         ),
         priority=1.0
@@ -100,7 +100,7 @@ def create_animal_classification_system():
             "has scales AND cold-blooded"
         ),
         effect=Effect(
-            lambda: classification.set_state(vocab["REPTILE"].vector),
+            lambda: setattr(classification, 'state', vocab["REPTILE"].vector),
             "classify as REPTILE"
         ),
         priority=1.0
@@ -117,7 +117,7 @@ def create_animal_classification_system():
             "is mammal AND walks"
         ),
         effect=Effect(
-            lambda: classification.set_state((vocab["DOG"] + vocab["MAMMAL"]).normalize().vector),
+            lambda: setattr(classification, 'state', (vocab["DOG"] + vocab["MAMMAL"]).normalize().vector),
             "identify as DOG"
         ),
         priority=2.0  # Higher priority for specific identification
@@ -153,7 +153,7 @@ def demonstrate_forward_chaining():
     
     # Set observation
     obs = vocab["HAS_FUR"] + vocab["GIVES_MILK"] + vocab["WARM_BLOODED"]
-    observation.set_state(obs.normalize().vector)
+    observation.state = obs.normalize().vector
     
     # Run inference
     print("   Observations: HAS_FUR, GIVES_MILK, WARM_BLOODED")
@@ -175,9 +175,9 @@ def demonstrate_forward_chaining():
     print("\n2. Test Case: Feathered animal with wings")
     
     # Reset and set new observation
-    classification.set_state(np.zeros(256))
+    classification.state = np.zeros(256)
     obs = vocab["HAS_FEATHERS"] + vocab["HAS_WINGS"] + vocab["LAYS_EGGS"]
-    observation.set_state(obs.normalize().vector)
+    observation.state = obs.normalize().vector
     
     print("   Observations: HAS_FEATHERS, HAS_WINGS, LAYS_EGGS")
     fired = ps.step()
@@ -194,9 +194,9 @@ def demonstrate_forward_chaining():
     print("\n3. Chaining Multiple Rules:")
     
     # First classify as mammal, then as dog
-    classification.set_state(np.zeros(256))
+    classification.state = np.zeros(256)
     obs = vocab["HAS_FUR"] + vocab["GIVES_MILK"] + vocab["WALKS"]
-    observation.set_state(obs.normalize().vector)
+    observation.state = obs.normalize().vector
     
     print("   Observations: HAS_FUR, GIVES_MILK, WALKS")
     
@@ -243,7 +243,7 @@ def demonstrate_conflict_resolution():
             "stimulus is A"
         ),
         effect=Effect(
-            lambda: output_state.set_state(vocab["RESPONSE_1"].vector),
+            lambda: setattr(output_state, 'state', vocab["RESPONSE_1"].vector),
             "respond with 1"
         ),
         priority=1.0,
@@ -259,7 +259,7 @@ def demonstrate_conflict_resolution():
             "stimulus is A AND urgent"
         ),
         effect=Effect(
-            lambda: output_state.set_state(vocab["RESPONSE_2"].vector),
+            lambda: setattr(output_state, 'state', vocab["RESPONSE_2"].vector),
             "respond with 2"
         ),
         priority=1.0,
@@ -280,7 +280,7 @@ def demonstrate_conflict_resolution():
     
     # Test with just A
     print("\n2. Test with A only:")
-    input_state.set_state(vocab["STIMULUS_A"].vector)
+    input_state.state = vocab["STIMULUS_A"].vector
     
     # Check which rules match
     utilities = ps.evaluate_all()
@@ -295,7 +295,7 @@ def demonstrate_conflict_resolution():
     
     # Test with A + Urgent
     print("\n3. Test with A + Urgent:")
-    input_state.set_state((vocab["STIMULUS_A"] + vocab["URGENT"]).normalize().vector)
+    input_state.state = (vocab["STIMULUS_A"] + vocab["URGENT"]).normalize().vector
     
     utilities = ps.evaluate_all()
     print("   Matching rules:")
@@ -327,7 +327,7 @@ def demonstrate_conflict_resolution():
     
     # Test with urgent input
     print("   Added emergency rule with priority=10.0")
-    input_state.set_state(vocab["URGENT"].vector)
+    input_state.state = vocab["URGENT"].vector
     
     fired = ps.step()
     if fired:
@@ -381,7 +381,7 @@ def demonstrate_learning_productions():
                 f"perceive {cond}"
             ),
             effect=Effect(
-                lambda a=act: action.set_state(vocab[a].vector),
+                lambda a=act: setattr(action, 'state', vocab[a].vector),
                 f"action {act}"
             )
         )
@@ -401,7 +401,7 @@ def demonstrate_learning_productions():
     
     # Trial 1: See food, approach, get reward
     print("\n   Trial 1:")
-    perception.set_state(vocab["SEE_FOOD"].vector)
+    perception.state = vocab["SEE_FOOD"].vector
     
     # Check which rule wins
     utilities = ps.evaluate_all()
@@ -411,7 +411,7 @@ def demonstrate_learning_productions():
     
     # Execute and get outcome
     winner.execute()
-    outcome.set_state(vocab["REWARD"].vector)
+    outcome.state = vocab["REWARD"].vector
     
     # Update strength based on outcome
     if "approach" in winner.name:
@@ -421,7 +421,7 @@ def demonstrate_learning_productions():
     
     # Trial 2: See food again
     print("\n   Trial 2:")
-    perception.set_state(vocab["SEE_FOOD"].vector)
+    perception.state = vocab["SEE_FOOD"].vector
     
     # Update conditions with new strengths
     for prod in ps.productions:
@@ -450,11 +450,11 @@ def demonstrate_learning_productions():
     learning_history = {"approach": [], "wait": []}
     
     for trial in range(10):
-        perception.set_state(vocab["SEE_FOOD"].vector)
+        perception.state = vocab["SEE_FOOD"].vector
         
         # Occasionally punish approach to show adaptation
         if trial == 5:
-            outcome.set_state(vocab["PUNISH"].vector)
+            outcome.state = vocab["PUNISH"].vector
             rule_strengths["see_food_approach"] -= 0.3
             rule_strengths["see_food_wait"] += 0.2
             print(f"   Trial {trial + 1}: PUNISHED for approach")
@@ -559,7 +559,7 @@ def demonstrate_production_parsing():
     
     # Test scenario 1: Student with exam soon
     print("\n   Scenario 1: Student with upcoming exam")
-    state.set_state((vocab["STUDENT"] + vocab["EXAM_SOON"]).normalize().vector)
+    state.state = (vocab["STUDENT"] + vocab["EXAM_SOON"]).normalize().vector
     
     fired = ps.step()
     if fired:
@@ -571,7 +571,7 @@ def demonstrate_production_parsing():
     
     # Test scenario 2: Very tired student
     print("\n   Scenario 2: Very tired")
-    state.set_state(vocab["TIRED"].vector)
+    state.state = vocab["TIRED"].vector
     
     fired = ps.step()
     if fired:
@@ -601,7 +601,7 @@ def demonstrate_production_analysis():
                 "is bird AND swims"
             ),
             effect=Effect(
-                lambda: classification.set_state(vocab["PENGUIN"].vector),
+                lambda: setattr(classification, 'state', vocab["PENGUIN"].vector),
                 "identify as PENGUIN"
             ),
             priority=2.0
@@ -614,7 +614,7 @@ def demonstrate_production_analysis():
                 "is bird AND flies"
             ),
             effect=Effect(
-                lambda: classification.set_state(vocab["EAGLE"].vector),
+                lambda: setattr(classification, 'state', vocab["EAGLE"].vector),
                 "identify as EAGLE"
             ),
             priority=2.0
@@ -640,8 +640,8 @@ def demonstrate_production_analysis():
     print("\n2. Execution Trace:")
     
     # Set up for bird that swims
-    observation.set_state((vocab["HAS_FEATHERS"] + vocab["HAS_WINGS"] + vocab["SWIMS"]).normalize().vector)
-    classification.set_state(np.zeros(256))
+    observation.state = (vocab["HAS_FEATHERS"] + vocab["HAS_WINGS"] + vocab["SWIMS"]).normalize().vector
+    classification.state = np.zeros(256)
     
     print("   Input: HAS_FEATHERS, HAS_WINGS, SWIMS")
     

@@ -126,7 +126,7 @@ def demonstrate_spa_modules():
     
     # Test retrieval
     print("\n3. Memory Retrieval:")
-    retrieved = memory.recall(vocab["CAT"].vector)
+    retrieved = memory.recall(vocab["CAT"].vector
     if retrieved is not None:
         # Find what was retrieved
         matches = vocab.cleanup(retrieved, top_n=2)
@@ -243,7 +243,7 @@ def demonstrate_action_selection():
     ]
     
     for state in states:
-        context.state = state
+        context.state = state)
         utilities = action_set.evaluate_all()
         history.append(utilities)
     
@@ -266,7 +266,8 @@ def demonstrate_complex_behavior():
     print("\n\n=== Complex SPA Behavior ===")
     
     # Create a simple cognitive model
-    spa = create_spa(dimension=256)
+    config = SPAConfig(dimension=256)
+    spa = create_spa(config)
     
     # Create vocabulary
     vocab = spa.vocabulary

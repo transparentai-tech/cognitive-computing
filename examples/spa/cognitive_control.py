@@ -33,8 +33,8 @@ def demonstrate_working_memory():
     print("\n=== Working Memory Control ===")
     
     # Create cognitive control system
-    config = SPAConfig(dimensions=256)
-    control = CognitiveControl(config)
+    config = SPAConfig(dimension=256)
+    control = CognitiveControl(256, config)
     
     # Create vocabulary
     vocab = Vocabulary(256)
@@ -101,8 +101,8 @@ def demonstrate_task_switching():
     print("\n\n=== Task Switching ===")
     
     # Create control system
-    config = SPAConfig(dimensions=128)
-    control = CognitiveControl(config)
+    config = SPAConfig(dimension=128)
+    control = CognitiveControl(128, config)
     
     # Create vocabulary for tasks and stimuli
     vocab = Vocabulary(128)
@@ -189,7 +189,7 @@ def demonstrate_inhibition_control():
     print("\n\n=== Inhibition and Conflict Control ===")
     
     # Create modules
-    config = SPAConfig(dimensions=128)
+    config = SPAConfig(dimension=128)
     
     # Stimulus input
     stimulus = State("stimulus", 128)
@@ -230,12 +230,12 @@ def demonstrate_inhibition_control():
     word_actions = {
         "RED": Action(
             condition=lambda: stimulus.get_semantic_pointer(vocab).dot(vocab["RED"]),
-            effect=lambda: response.set_state(vocab["RED"].vector),
+            effect=lambda: setattr(response, 'state', vocab["RED"].vector),
             name="read_red"
         ),
         "BLUE": Action(
             condition=lambda: stimulus.get_semantic_pointer(vocab).dot(vocab["BLUE"]),
-            effect=lambda: response.set_state(vocab["BLUE"].vector),
+            effect=lambda: setattr(response, 'state', vocab["BLUE"].vector),
             name="read_blue"
         )
     }
@@ -244,12 +244,12 @@ def demonstrate_inhibition_control():
     color_actions = {
         "COLOR_RED": Action(
             condition=lambda: stimulus.get_semantic_pointer(vocab).dot(vocab["COLOR_RED"]) * inhibit_gate.gate_value,
-            effect=lambda: response.set_state(vocab["RED"].vector),
+            effect=lambda: setattr(response, 'state', vocab["RED"].vector),
             name="name_red"
         ),
         "COLOR_BLUE": Action(
             condition=lambda: stimulus.get_semantic_pointer(vocab).dot(vocab["COLOR_BLUE"]) * inhibit_gate.gate_value,
-            effect=lambda: response.set_state(vocab["BLUE"].vector),
+            effect=lambda: setattr(response, 'state', vocab["BLUE"].vector),
             name="name_blue"
         )
     }
@@ -262,7 +262,7 @@ def demonstrate_inhibition_control():
     # Test without inhibition
     print("\n2. Without Inhibitory Control:")
     inhibit_gate.set_gate(0.3)  # Weak control
-    stimulus.set_state(incongruent.vector)
+    stimulus.state = incongruent.vector
     
     utilities = actions.evaluate_all()
     print("   Action utilities (BLUE + COLOR_RED):")
@@ -316,8 +316,8 @@ def demonstrate_goal_directed_behavior():
     model.add_module("working_memory", "memory", dimensions=256)
     
     # Create cognitive control
-    config = SPAConfig(dimensions=256)
-    control = CognitiveControl(config)
+    config = SPAConfig(dimension=256)
+    control = CognitiveControl(256, config)
     
     print("\n1. Goal Hierarchy:")
     
@@ -506,8 +506,8 @@ def demonstrate_conflict_monitoring():
     print("\n\n=== Conflict Monitoring ===")
     
     # Create cognitive control with conflict monitoring
-    config = SPAConfig(dimensions=128)
-    control = CognitiveControl(config)
+    config = SPAConfig(dimension=128)
+    control = CognitiveControl(128, config)
     
     # Create vocabulary
     vocab = Vocabulary(128)
@@ -599,8 +599,8 @@ def visualize_cognitive_control():
     print("\n\n=== Visualizing Cognitive Control ===")
     
     # Create a simple model with control
-    config = SPAConfig(dimensions=128)
-    control = CognitiveControl(config)
+    config = SPAConfig(dimension=128)
+    control = CognitiveControl(128, config)
     
     # Track control dynamics over time
     time_steps = 100

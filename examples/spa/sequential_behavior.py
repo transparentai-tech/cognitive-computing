@@ -89,7 +89,7 @@ def create_motor_sequence():
         current = sequencer.get_current_step("type_hello")
         
         if current is not None:
-            motor_state.set_state(current)
+            motor_state.state = current
             
             # Decode action
             pointer = motor_state.get_semantic_pointer(vocab)
@@ -191,7 +191,7 @@ def create_cooking_sequence():
         current = main_seq.get_current_step("make_pancakes")
         
         if current is not None:
-            action_state.set_state(current)
+            action_state.state = current
             pointer = action_state.get_semantic_pointer(vocab)
             
             # Check if we need to execute sub-sequence
@@ -204,7 +204,7 @@ def create_cooking_sequence():
             if in_subsequence and not sub_seq.is_sequence_complete("mix_batter"):
                 sub_current = sub_seq.get_current_step("mix_batter")
                 if sub_current is not None:
-                    action_state.set_state(sub_current)
+                    action_state.state = sub_current
                     sub_pointer = action_state.get_semantic_pointer(vocab)
                     
                     # Decode sub-action
@@ -220,7 +220,7 @@ def create_cooking_sequence():
                 if sub_seq.is_sequence_complete("mix_batter"):
                     print("   [Sub-sequence complete]")
                     in_subsequence = False
-                    status_state.set_state(vocab["MIXED"].vector)
+                    status_state.state = vocab["MIXED"].vector
             else:
                 # Regular main sequence step
                 for act in actions:
@@ -229,9 +229,9 @@ def create_cooking_sequence():
                         
                         # Update status based on action
                         if act == "HEAT":
-                            status_state.set_state(vocab["COOKING"].vector)
+                            status_state.state = vocab["COOKING"].vector
                         elif act == "SERVE":
-                            status_state.set_state(vocab["READY"].vector)
+                            status_state.state = vocab["READY"].vector
                         break
                 
                 main_seq.advance_sequence("make_pancakes")
@@ -284,7 +284,7 @@ def demonstrate_conditional_sequences():
             "green light AND clear"
         ),
         effect=Effect(
-            lambda: action_state.set_state(vocab["GO"].vector),
+            lambda: setattr(action_state, 'state', vocab["GO"].vector),
             "action GO"
         )
     )
@@ -298,7 +298,7 @@ def demonstrate_conditional_sequences():
             "green light AND pedestrian"
         ),
         effect=Effect(
-            lambda: action_state.set_state(vocab["WAIT"].vector),
+            lambda: setattr(action_state, 'state', vocab["WAIT"].vector),
             "action WAIT"
         ),
         priority=2.0  # Higher priority for safety
@@ -312,7 +312,7 @@ def demonstrate_conditional_sequences():
             "red light"
         ),
         effect=Effect(
-            lambda: action_state.set_state(vocab["STOP"].vector),
+            lambda: setattr(action_state, 'state', vocab["STOP"].vector),
             "action STOP"
         )
     )
@@ -325,7 +325,7 @@ def demonstrate_conditional_sequences():
             "yellow light"
         ),
         effect=Effect(
-            lambda: action_state.set_state(vocab["SLOW"].vector),
+            lambda: setattr(action_state, 'state', vocab["SLOW"].vector),
             "action SLOW"
         )
     )
@@ -360,8 +360,8 @@ def demonstrate_conditional_sequences():
         print(f"\n   Scenario: {desc}")
         print(f"   Light: {light}, Condition: {condition}")
         
-        light_state.set_state(vocab[light].vector)
-        condition_state.set_state(vocab[condition].vector)
+        light_state.state = vocab[light].vector
+        condition_state.state = vocab[condition].vector
         
         # Execute rules
         fired = ps.step()
@@ -445,7 +445,7 @@ def demonstrate_interruption_handling():
     print("\n2. Execution with Interruption:")
     
     main_seq.start_sequence("work")
-    status.set_state(vocab["WORKING"].vector)
+    status.state = vocab["WORKING"].vector
     
     step = 0
     interrupted_at = -1
@@ -458,11 +458,11 @@ def demonstrate_interruption_handling():
             
             # Save current state
             current = main_seq.get_current_step("work")
-            saved_state.set_state(current)
+            saved_state.state = current
             saved_position = main_seq.sequences["work"]["position"]
             
             # Mark interruption
-            status.set_state(vocab["INTERRUPTED"].vector)
+            status.state = vocab["INTERRUPTED"].vector
             interrupted_at = step
             
             # Start interrupt sequence
@@ -474,7 +474,7 @@ def demonstrate_interruption_handling():
             if not interrupt_seq.is_sequence_complete("phone"):
                 current = interrupt_seq.get_current_step("phone")
                 if current is not None:
-                    action.set_state(current)
+                    action.state = current
                     act_ptr = action.get_semantic_pointer(vocab)
                     
                     # Find action
@@ -487,14 +487,14 @@ def demonstrate_interruption_handling():
             else:
                 # Interruption complete, resume main task
                 print("\n   [RESUMING MAIN TASK]")
-                status.set_state(vocab["RESUMING"].vector)
+                status.state = vocab["RESUMING"].vector
                 
                 # Restore position
                 main_seq.sequences["work"]["position"] = saved_position
         
         elif status.get_semantic_pointer(vocab).similarity(vocab["RESUMING"]) > 0.5:
             # Transition back to working
-            status.set_state(vocab["WORKING"].vector)
+            status.state = vocab["WORKING"].vector
             print(f"   Resumed at position {saved_position}")
         
         else:
@@ -502,7 +502,7 @@ def demonstrate_interruption_handling():
             if not main_seq.is_sequence_complete("work"):
                 current = main_seq.get_current_step("work")
                 if current is not None:
-                    action.set_state(current)
+                    action.state = current
                     act_ptr = action.get_semantic_pointer(vocab)
                     
                     # Find action

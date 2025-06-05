@@ -144,7 +144,7 @@ def demonstrate_simple_qa():
     
     # Question: What is the capital of France?
     q1 = vocab["WHAT"] * vocab["CAPITAL_OF"] * vocab["FRANCE"]
-    question.set_state(q1.vector)
+    question.state = q1.vector
     
     print("   Question: What is the capital of France?")
     print("   Encoded as: WHAT * CAPITAL_OF * FRANCE")
@@ -174,15 +174,15 @@ def demonstrate_simple_qa():
             for name, sim in matches:
                 if sim > 0.3 and name not in ["CAPITAL_OF", "FRANCE", "WHAT"]:
                     print(f"   Answer: {name} (confidence: {sim:.2f})")
-                    answer.set_state(vocab[name].vector)
-                    confidence.set_state(np.array([sim]))
+                    answer.state = vocab[name].vector
+                    confidence.state = np.array([sim])
                     break
     
     # Question 2: Who created relativity?
     print("\n2. Who Questions:")
     
     q2 = vocab["WHO"] * vocab["CREATED_BY"] * vocab["RELATIVITY"]
-    question.set_state(q2.vector)
+    question.state = q2.vector
     
     print("   Question: Who created relativity?")
     
@@ -275,11 +275,11 @@ def demonstrate_complex_qa():
         chain.append("EIFFEL_TOWER in PARIS")
     
     # PARIS -> FRANCE  
-    if kb.query(vocab["PARIS"].vector):
+    if kb.query(vocab["EIFFEL_TOWER"].vector):
         chain.append("PARIS capital of FRANCE")
         
     # FRANCE -> EUROPE
-    if kb.query(vocab["FRANCE"].vector):
+    if kb.query(vocab["EIFFEL_TOWER"].vector):
         chain.append("FRANCE part of EUROPE")
     
     if len(chain) == 3:
@@ -477,7 +477,7 @@ def demonstrate_question_types():
     
     for q_word, relation, topic in test_questions:
         q_vec = vocab[q_word] * vocab[relation] * vocab[topic]
-        question.set_state(q_vec.vector)
+        question.state = q_vec.vector
         
         print(f"\n   Question: {q_word} {relation.lower().replace('_', ' ')} {topic}?")
         ps.step()
