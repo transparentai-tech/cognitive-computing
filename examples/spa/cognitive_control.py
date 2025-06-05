@@ -17,7 +17,7 @@ demonstrate how SPA can model high-level cognitive control.
 import numpy as np
 import matplotlib.pyplot as plt
 from cognitive_computing.spa import (
-    create_spa, SPAConfig, Vocabulary,
+    create_spa, SPAConfig, Vocabulary, SemanticPointer,
     State, Buffer, Gate,
     CognitiveControl, Routing, Gating, Sequencing,
     ActionSet, Action, BasalGanglia,
@@ -48,49 +48,57 @@ def demonstrate_working_memory():
     vocab.create_pointer("MAINTAIN")
     vocab.create_pointer("UPDATE")
     
-    print("\n1. Working Memory Capacity:")
-    print(f"   Max items: {control.config.wm_capacity}")
+    # Set control's vocabulary
+    control.vocab = vocab
     
-    # Store items in working memory
+    print("\n1. Working Memory Capacity:")
+    print(f"   Max items: {config.capacity if hasattr(config, 'capacity') else 'unlimited'}")
+    
+    # Add working memory buffers
     print("\n2. Loading Working Memory:")
     for i, item in enumerate(items[:3]):
-        control.update_working_memory(i, vocab[item].vector)
+        buffer_name = f"slot_{i}"
+        control.add_working_memory(buffer_name)
+        control.working_memory[buffer_name].state = vocab[item].vector
         print(f"   Slot {i}: {item}")
     
     # Demonstrate maintenance with attention
     print("\n3. Selective Attention:")
     # Focus on BANANA (slot 1)
-    control.set_attention(target="wm_slot_1", strength=1.0)
-    print("   Focusing on slot 1 (BANANA)")
+    control.set_attention(vocab["BANANA"].vector)
+    print("   Focusing on BANANA")
     
-    # Check what's in focus
-    attended = control.get_attended_information()
-    if attended is not None and "wm_slot_1" in attended:
-        matches = vocab.cleanup(attended["wm_slot_1"], top_n=1)
-        if matches:
-            print(f"   Attended item: {matches[0][0]}")
+    # Check attention similarity to items
+    for i, item in enumerate(items[:3]):
+        sim = vocab[item].similarity(SemanticPointer(control.attention, vocabulary=vocab))
+        if sim > 0.8:
+            print(f"   Attended item in slot {i}: {item} (similarity: {sim:.3f})")
     
     # Demonstrate updating with cognitive control
     print("\n4. Controlled Updating:")
     print("   Current slot 2: ORANGE")
     
-    # Gate is controlled by cognitive control
-    update_gate = control.working_memory.get("update_gate", 0.0)
-    print(f"   Update gate: {update_gate:.2f}")
+    # Create an update gate
+    control.add_working_memory("update_gate")
+    update_gate = control.working_memory["update_gate"]
+    
+    # Gate starts closed
+    update_gate.gate_value = 0.0
+    print(f"   Update gate: {update_gate.gate_value:.2f}")
     
     # Open gate to update
-    control.working_memory["update_gate"] = 1.0
-    control.update_working_memory(2, vocab["GRAPE"].vector)
+    update_gate.gate_value = 1.0
+    print("   Gate opened - updating slot 2")
+    control.working_memory["slot_2"].state = vocab["GRAPE"].vector
     
     # Check update
-    wm_content = control.working_memory.get("slot_2")
-    if wm_content is not None:
-        matches = vocab.cleanup(wm_content, top_n=1)
-        if matches:
-            print(f"   Updated slot 2: {matches[0][0]}")
+    wm_content = control.working_memory["slot_2"].state
+    matches = vocab.cleanup(wm_content, top_n=1)
+    if matches:
+        print(f"   Updated slot 2: {matches[0][0]}")
     
     # Close gate to maintain
-    control.working_memory["update_gate"] = 0.0
+    update_gate.gate_value = 0.0
     print("   Gate closed - maintaining current contents")
     
     return control, vocab
@@ -127,58 +135,58 @@ def demonstrate_task_switching():
     
     print("\n1. Task Stack Management:")
     
+    # Set control's vocabulary first
+    control.vocab = vocab
+    
     # Push tasks onto stack
-    control.push_task(vocab["COLOR_TASK"].vector)
-    control.push_task(vocab["SHAPE_TASK"].vector)
+    control.push_task("COLOR_TASK")
+    control.push_task("SHAPE_TASK")
     
     print("   Task stack:")
-    for i, task_vec in enumerate(control.task_stack):
-        matches = vocab.cleanup(task_vec, top_n=1)
-        if matches:
-            print(f"   {i}: {matches[0][0]}")
+    for i, task in enumerate(control.task_stack):
+        print(f"   {i}: {task}")
     
     # Switch tasks
     print("\n2. Task Switching:")
-    current_task = control.get_current_task()
-    if current_task is not None:
-        matches = vocab.cleanup(current_task, top_n=1)
-        print(f"   Current task: {matches[0][0] if matches else 'Unknown'}")
+    if control.current_task is not None:
+        print(f"   Current task: {control.current_task}")
     
     # Pop to switch
     control.pop_task()
-    current_task = control.get_current_task()
-    if current_task is not None:
-        matches = vocab.cleanup(current_task, top_n=1)
-        print(f"   After switch: {matches[0][0] if matches else 'Unknown'}")
+    if control.current_task is not None:
+        print(f"   After switch: {control.current_task}")
     
     # Demonstrate task-based routing
     print("\n3. Task-Based Response Routing:")
     
     # Create routing rules
-    routing = Routing()
+    routing = Routing(128, config)
     
     # Color task routes colors to responses
-    routing.add_route("color_input", "response", 
-                      condition=lambda: control.is_task_active(vocab["COLOR_TASK"].vector))
+    color_gate = routing.add_route("color_input", "response")
     
     # Shape task routes shapes to responses  
-    routing.add_route("shape_input", "response",
-                      condition=lambda: control.is_task_active(vocab["SHAPE_TASK"].vector))
+    shape_gate = routing.add_route("shape_input", "response")
     
     # Test routing with different tasks
-    control.set_current_goal(vocab["COLOR_TASK"].vector)
+    control.set_goal(vocab["COLOR_TASK"].vector)
     
     # Simulate color input
     color_signal = vocab["RED"].vector
-    if routing.should_route("color_input", "response"):
+    # Open color gate when color task is active
+    if control.task_state @ vocab["COLOR_TASK"].vector > 0.8:
+        color_gate.set_gate(1.0)
         print("   COLOR_TASK active: Routing RED -> response")
     
     # Switch task
-    control.set_current_goal(vocab["SHAPE_TASK"].vector)
+    control.set_goal(vocab["SHAPE_TASK"].vector)
     
     # Now shape input should route
     shape_signal = vocab["CIRCLE"].vector
-    if routing.should_route("shape_input", "response"):
+    # Open shape gate when shape task is active
+    if control.task_state @ vocab["SHAPE_TASK"].vector > 0.8:
+        shape_gate.set_gate(1.0)
+        color_gate.set_gate(0.0)  # Close color gate
         print("   SHAPE_TASK active: Routing CIRCLE -> response")
     
     return control, vocab, routing
@@ -290,7 +298,8 @@ def demonstrate_goal_directed_behavior():
     print("\n\n=== Goal-Directed Behavior ===")
     
     # Create SPA model with cognitive control
-    model = SPAModel("goal_directed_model")
+    config = SPAConfig(dimension=256)
+    model = SPAModel("goal_directed_model", config)
     
     # Add vocabulary
     vocab = Vocabulary(256)
@@ -322,10 +331,9 @@ def demonstrate_goal_directed_behavior():
     print("\n1. Goal Hierarchy:")
     
     # Set top-level goal
-    control.set_current_goal(vocab["FIND_FOOD"].vector)
-    current_goal = control.get_current_goal()
-    if current_goal is not None:
-        matches = vocab.cleanup(current_goal, top_n=1)
+    control.set_goal(vocab["FIND_FOOD"].vector)
+    if np.any(control.goal_state):
+        matches = vocab.cleanup(control.goal_state, top_n=1)
         print(f"   Top goal: {matches[0][0] if matches else 'Unknown'}")
     
     # Break down into subgoals
@@ -343,21 +351,23 @@ def demonstrate_goal_directed_behavior():
     goal_actions = ActionSet()
     
     # If goal is FIND_FOOD and HUNGRY, then SEARCH
+    def search_food_condition():
+        goal_sim = control.goal_state @ vocab["FIND_FOOD"].vector / np.linalg.norm(control.goal_state)
+        return goal_sim * 0.8 + np.random.random() * 0.2
+        
     search_food = Action(
-        condition=lambda: (
-            control.is_goal_active(vocab["FIND_FOOD"].vector) * 0.8 +
-            np.random.random() * 0.2  # Some noise
-        ),
+        condition=search_food_condition,
         effect=lambda: print("   -> Action: SEARCH for food"),
         name="search_food"
     )
     
     # If goal is FIND_FOOD and near food, then APPROACH
+    def approach_food_condition():
+        goal_sim = control.goal_state @ vocab["FIND_FOOD"].vector / np.linalg.norm(control.goal_state)
+        return goal_sim * 0.6 + np.random.random() * 0.2
+        
     approach_food = Action(
-        condition=lambda: (
-            control.is_goal_active(vocab["FIND_FOOD"].vector) * 0.6 +
-            np.random.random() * 0.2
-        ),
+        condition=approach_food_condition,
         effect=lambda: print("   -> Action: APPROACH food"),
         name="approach_food"
     )
@@ -377,10 +387,9 @@ def demonstrate_goal_directed_behavior():
     
     # Change goal
     print("\n3. Goal Switching:")
-    control.set_current_goal(vocab["FIND_WATER"].vector)
-    current_goal = control.get_current_goal()
-    if current_goal is not None:
-        matches = vocab.cleanup(current_goal, top_n=1)
+    control.set_goal(vocab["FIND_WATER"].vector)
+    if np.any(control.goal_state):
+        matches = vocab.cleanup(control.goal_state, top_n=1)
         print(f"   New goal: {matches[0][0] if matches else 'Unknown'}")
     
     # Goals affect action utilities
@@ -396,11 +405,12 @@ def demonstrate_sequencing_control():
     """Demonstrate sequential behavior control."""
     print("\n\n=== Sequential Behavior Control ===")
     
-    # Create sequencing controller
-    sequencing = Sequencing()
-    
-    # Create vocabulary
+    # Create vocabulary first
     vocab = Vocabulary(128)
+    config = SPAConfig(dimension=128)
+    
+    # Create sequencing controller
+    sequencing = Sequencing(128, config, vocab)
     
     # Define steps for making coffee
     coffee_steps = [
@@ -416,9 +426,7 @@ def demonstrate_sequencing_control():
         vocab.create_pointer(step)
     
     # Define sequence
-    sequencing.define_sequence("make_coffee", [
-        vocab[step].vector for step in coffee_steps
-    ])
+    sequencing.define_sequence("make_coffee", coffee_steps)
     
     print("\n1. Sequence Definition:")
     print("   Make coffee sequence:")
@@ -430,15 +438,12 @@ def demonstrate_sequencing_control():
     sequencing.start_sequence("make_coffee")
     
     step_count = 0
-    while not sequencing.is_sequence_complete("make_coffee") and step_count < 10:
-        current = sequencing.get_current_step("make_coffee")
+    while step_count < len(coffee_steps):
+        current = sequencing.next_step()
         if current is not None:
-            matches = vocab.cleanup(current, top_n=1)
-            if matches:
-                print(f"   Step {step_count + 1}: {matches[0][0]}")
-        
-        # Advance to next step
-        sequencing.advance_sequence("make_coffee")
+            print(f"   Step {step_count + 1}: {current}")
+        else:
+            break
         step_count += 1
     
     print("   Sequence complete!")
@@ -451,25 +456,22 @@ def demonstrate_sequencing_control():
     
     # Execute first few steps
     for i in range(3):
-        current = sequencing.get_current_step("make_coffee")
+        current = sequencing.next_step()
         if current is not None:
-            matches = vocab.cleanup(current, top_n=1)
-            if matches:
-                print(f"   Executed: {matches[0][0]}")
-        sequencing.advance_sequence("make_coffee")
+            print(f"   Executed: {current}")
     
     # Interrupt
     print("   [INTERRUPTED]")
-    position = sequencing.sequences["make_coffee"]["position"]
+    sequencing.pause_sequence()
+    position = sequencing.sequence_index
     print(f"   Saved position: {position}")
     
     # Resume
     print("   [RESUMING]")
-    current = sequencing.get_current_step("make_coffee")
+    sequencing.resume_sequence()
+    current = sequencing.next_step()
     if current is not None:
-        matches = vocab.cleanup(current, top_n=1)
-        if matches:
-            print(f"   Resuming at: {matches[0][0]}")
+        print(f"   Resuming at: {current}")
     
     # Loop demonstration
     print("\n4. Sequence Looping:")
@@ -479,24 +481,22 @@ def demonstrate_sequencing_control():
     for step in count_steps:
         vocab.create_pointer(step)
     
-    sequencing.define_sequence("count", [
-        vocab[step].vector for step in count_steps
-    ], loop=True)
+    sequencing.define_sequence("count", count_steps)
+    sequencing.max_loops = 3  # Enable looping
     
     sequencing.start_sequence("count")
     
     print("   Looping count sequence:")
     for i in range(9):  # Show 3 loops
-        current = sequencing.get_current_step("count")
+        current = sequencing.next_step()
         if current is not None:
-            matches = vocab.cleanup(current, top_n=1)
-            if matches:
-                print(f"   {i+1}: {matches[0][0]}", end="")
-                if (i + 1) % 3 == 0:
-                    print(" [loop]")
-                else:
-                    print()
-        sequencing.advance_sequence("count")
+            print(f"   {i+1}: {current}", end="")
+            if (i + 1) % 3 == 0:
+                print(" [loop]")
+            else:
+                print()
+        else:
+            break
     
     return sequencing, vocab
 
@@ -533,19 +533,22 @@ def demonstrate_conflict_monitoring():
     utilities = np.array([response1_utility, response2_utility, response3_utility])
     
     # Monitor conflict
-    conflict = control.monitor_conflict(utilities)
+    control.update_conflict(utilities)
+    conflict = control.conflict_level
     print(f"   Response utilities: GO={response1_utility}, STOP={response2_utility}, WAIT={response3_utility}")
     print(f"   Conflict level: {conflict:.3f}")
     
     # High conflict case
     utilities_high = np.array([0.8, 0.79, 0.78])
-    conflict_high = control.monitor_conflict(utilities_high)
+    control.update_conflict(utilities_high)
+    conflict_high = control.conflict_level
     print(f"\n   High conflict utilities: {utilities_high}")
     print(f"   Conflict level: {conflict_high:.3f} (high)")
     
     # Low conflict case  
     utilities_low = np.array([0.9, 0.2, 0.1])
-    conflict_low = control.monitor_conflict(utilities_low)
+    control.update_conflict(utilities_low)
+    conflict_low = control.conflict_level
     print(f"\n   Low conflict utilities: {utilities_low}")
     print(f"   Conflict level: {conflict_low:.3f} (low)")
     
@@ -563,7 +566,8 @@ def demonstrate_conflict_monitoring():
         utilities_updated = np.clip(utilities_updated, 0, 1)
         print(f"   Updated utilities: {utilities_updated}")
         
-        conflict_updated = control.monitor_conflict(utilities_updated)
+        control.update_conflict(utilities_updated)
+        conflict_updated = control.conflict_level
         print(f"   Updated conflict: {conflict_updated:.3f}")
     
     # Strategy 3: Invoke supervisory control
@@ -580,7 +584,8 @@ def demonstrate_conflict_monitoring():
     expected_outcome = vocab["GO"].vector
     actual_outcome = vocab["STOP"].vector  # Error!
     
-    error_signal = control.monitor_error(expected_outcome, actual_outcome)
+    control.update_error(expected_outcome, actual_outcome)
+    error_signal = control.error_signal
     print(f"   Selected: {selected_action}")
     print(f"   Expected: GO, Actual: STOP")
     print(f"   Error signal: {error_signal:.3f}")
@@ -588,8 +593,8 @@ def demonstrate_conflict_monitoring():
     # Error leads to control adjustment
     if error_signal > 0.5:
         print("   Error detected - increasing cognitive control")
-        control.control_strength *= 1.2
-        print(f"   New control strength: {control.control_strength:.3f}")
+        # Could implement control adjustment logic here
+        print(f"   Error signal strength: {error_signal:.3f}")
     
     return control, vocab
 
@@ -620,12 +625,13 @@ def visualize_cognitive_control():
         utilities = np.array([util1, util2, util3])
         
         # Monitor conflict
-        conflict = control.monitor_conflict(utilities)
+        control.update_conflict(utilities)
+        conflict = control.conflict_level
         conflict_history.append(conflict)
         
         # Adjust control based on conflict
-        control.control_strength = 0.5 + conflict * 0.5
-        control_history.append(control.control_strength)
+        control_strength = 0.5 + conflict * 0.5
+        control_history.append(control_strength)
     
     # Plot dynamics
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)

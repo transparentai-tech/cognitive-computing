@@ -84,7 +84,7 @@ class CognitiveControl(Module):
             Symbol name or vector to attend to
         """
         if isinstance(target, str):
-            self._attention = self.vectorocab.parse(target).vector
+            self._attention = self.vocab.parse(target).vector
         else:
             self._attention = np.array(target)
             
@@ -98,7 +98,7 @@ class CognitiveControl(Module):
             Goal symbol or vector
         """
         if isinstance(goal, str):
-            self._goal_state = self.vectorocab.parse(goal).vector
+            self._goal_state = self.vocab.parse(goal).vector
         else:
             self._goal_state = np.array(goal)
             
@@ -114,7 +114,7 @@ class CognitiveControl(Module):
         if self.current_task is not None:
             self.task_stack.append(self.current_task)
         self.current_task = task
-        self._task_state = self.vectorocab.parse(task).vector
+        self._task_state = self.vocab.parse(task).vector
         
     def pop_task(self) -> Optional[str]:
         """
@@ -128,7 +128,7 @@ class CognitiveControl(Module):
         previous = self.current_task
         if self.task_stack:
             self.current_task = self.task_stack.pop()
-            self._task_state = self.vectorocab.parse(self.current_task).vector
+            self._task_state = self.vocab.parse(self.current_task).vector
         else:
             self.current_task = None
             self._task_state = np.zeros(self.dimensions)
@@ -440,7 +440,7 @@ class Sequencing(Module):
         """Initialize sequencing."""
         super().__init__("Sequencing", dimensions)
         self.config = config
-        self.vectorocab = vocab
+        self.vocab = vocab
         
         # Sequence definitions
         self.sequences: Dict[str, List[Union[str, Callable]]] = {}
