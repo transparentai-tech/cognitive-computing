@@ -19,11 +19,35 @@ from .core import (
     create_vocabulary,
 )
 
+# Module imports
+from .modules import (
+    Module,
+    State,
+    Memory,
+    AssociativeMemory,
+    Buffer,
+    Gate,
+    Compare,
+    DotProduct,
+    Connection,
+)
+
 __all__ = [
+    # Core
     "SPAConfig",
     "SemanticPointer",
     "Vocabulary", 
     "SPA",
     "create_spa",
     "create_vocabulary",
+    # Modules
+    "Module",
+    "State",
+    "Memory",
+    "AssociativeMemory",
+    "Buffer",
+    "Gate",
+    "Compare",
+    "DotProduct",
+    "Connection",
 ]
