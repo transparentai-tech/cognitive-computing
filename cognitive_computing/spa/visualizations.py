@@ -354,8 +354,19 @@ def visualize_production_flow(
     cols = int(np.ceil(np.sqrt(n_productions)))
     rows = int(np.ceil(n_productions / cols))
     
-    # Track execution order
-    executed_set = set(executed_productions) if executed_productions else set()
+    # Track execution order - handle both production objects and names
+    if executed_productions:
+        # Convert to names if production objects were passed
+        executed_names = []
+        for item in executed_productions:
+            if hasattr(item, 'name'):
+                executed_names.append(item.name)
+            else:
+                executed_names.append(item)
+        executed_set = set(executed_names)
+    else:
+        executed_names = []
+        executed_set = set()
     
     # Draw each production
     for i, prod in enumerate(productions):
@@ -401,13 +412,13 @@ def visualize_production_flow(
                 fontsize=8)
     
     # Draw execution order arrows if provided
-    if executed_productions and len(executed_productions) > 1:
+    if executed_names and len(executed_names) > 1:
         # Create mapping from name to index
         name_to_idx = {p.name: i for i, p in enumerate(productions)}
         
-        for i in range(len(executed_productions) - 1):
-            prod1_name = executed_productions[i]
-            prod2_name = executed_productions[i + 1]
+        for i in range(len(executed_names) - 1):
+            prod1_name = executed_names[i]
+            prod2_name = executed_names[i + 1]
             
             # Find positions
             if prod1_name in name_to_idx and prod2_name in name_to_idx:

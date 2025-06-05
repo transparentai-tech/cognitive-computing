@@ -181,17 +181,23 @@ class TestPlotNetworkGraph:
     
     def test_basic_network_graph(self):
         """Test basic network graph."""
-        network = Network()
+        # Create a mock Network with modules dict
+        network = Mock()
+        network.modules = {}
+        network.connections = []
         
         # Add modules
         state1 = State("state1", 16)
         state2 = State("state2", 16)
-        network.add_module(state1)
-        network.add_module(state2)
+        network.modules[state1.name] = state1
+        network.modules[state2.name] = state2
         
         # Add connection
-        conn = Connection(state1, state2, np.eye(16))
-        network.add_connection(conn)
+        conn = Mock()
+        conn.source = state1
+        conn.target = state2
+        conn.transform = np.eye(16)
+        network.connections.append(conn)
         
         if NETWORKX_AVAILABLE:
             fig, ax = plot_network_graph(network)
@@ -208,9 +214,11 @@ class TestPlotNetworkGraph:
     
     def test_network_graph_layouts(self):
         """Test different layout algorithms."""
-        network = Network()
+        network = Mock()
+        network.modules = {}
+        network.connections = []
         state = State("state", 16)
-        network.add_module(state)
+        network.modules[state.name] = state
         
         for layout in ["spring", "circular", "random"]:
             if NETWORKX_AVAILABLE:
@@ -220,9 +228,11 @@ class TestPlotNetworkGraph:
     
     def test_network_graph_save(self, tmp_path):
         """Test saving network graph."""
-        network = Network()
+        network = Mock()
+        network.modules = {}
+        network.connections = []
         state = State("state", 16)
-        network.add_module(state)
+        network.modules[state.name] = state
         
         save_path = tmp_path / "network.png"
         fig, ax = plot_network_graph(network, save_path=str(save_path))
@@ -239,14 +249,24 @@ class TestVisualizeProductionFlow:
         """Test basic production flow."""
         ps = ProductionSystem()
         
-        # Add productions
-        cond1 = Condition("state.A > 0.5", "A is active")
-        effect1 = Effect("state.B = 1", "Activate B")
-        prod1 = Production("Rule1", cond1, effect1)
+        # Add productions with mocks
+        cond1 = Mock()
+        cond1.__str__ = Mock(return_value="state.A > 0.5")
+        effect1 = Mock()
+        effect1.__str__ = Mock(return_value="state.B = 1")
+        prod1 = Mock()
+        prod1.name = "Rule1"
+        prod1.condition = cond1
+        prod1.effect = effect1
         
-        cond2 = Condition("state.B > 0.5", "B is active")
-        effect2 = Effect("state.C = 1", "Activate C")
-        prod2 = Production("Rule2", cond2, effect2)
+        cond2 = Mock()
+        cond2.__str__ = Mock(return_value="state.B > 0.5")
+        effect2 = Mock()
+        effect2.__str__ = Mock(return_value="state.C = 1")
+        prod2 = Mock()
+        prod2.name = "Rule2"
+        prod2.condition = cond2
+        prod2.effect = effect2
         
         ps.add_production(prod1)
         ps.add_production(prod2)
@@ -263,14 +283,23 @@ class TestVisualizeProductionFlow:
         """Test with executed productions highlighted."""
         ps = ProductionSystem()
         
-        cond = Condition("True", "Always")
-        effect = Effect("state.A = 1", "Set A")
-        prod1 = Production("Rule1", cond, effect)
-        prod2 = Production("Rule2", cond, effect)
+        cond = Mock()
+        cond.__str__ = Mock(return_value="True")
+        effect = Mock()
+        effect.__str__ = Mock(return_value="state.A = 1")
+        prod1 = Mock()
+        prod1.name = "Rule1"
+        prod1.condition = cond
+        prod1.effect = effect
+        prod2 = Mock()
+        prod2.name = "Rule2"
+        prod2.condition = cond
+        prod2.effect = effect
         
         ps.add_production(prod1)
         ps.add_production(prod2)
         
+        # Pass the production object, not its name
         fig, ax = visualize_production_flow(ps, executed_productions=[prod1])
         
         assert isinstance(fig, Figure)
@@ -293,9 +322,14 @@ class TestVisualizeProductionFlow:
         """Test saving production flow."""
         ps = ProductionSystem()
         
-        cond = Condition("True", "Always")
-        effect = Effect("state.A = 1", "Set A")
-        prod = Production("Rule", cond, effect)
+        cond = Mock()
+        cond.__str__ = Mock(return_value="True")
+        effect = Mock()
+        effect.__str__ = Mock(return_value="state.A = 1")
+        prod = Mock()
+        prod.name = "Rule"
+        prod.condition = cond
+        prod.effect = effect
         ps.add_production(prod)
         
         save_path = tmp_path / "production.png"
@@ -330,7 +364,7 @@ class TestAnimateStateEvolution:
         # Create states that evolve
         states = []
         for i in range(10):
-            state = vocab["A"].v * (1 - i/10) + vocab["B"].v * (i/10)
+            state = vocab["A"].vector * (1 - i/10) + vocab["B"].vector * (i/10)
             states.append(state)
         
         anim = animate_state_evolution(states, vocab=vocab, top_k=3)
@@ -535,9 +569,11 @@ class TestPlotInteractiveNetwork:
             mock_app = MagicMock()
             mock_dash.return_value = mock_app
             
-            network = Network()
+            network = Mock()
+            network.modules = {}
+            network.connections = []
             state = State("state", 16)
-            network.add_module(state)
+            network.modules[state.name] = state
             
             plot_interactive_network(network, port=8051)
             
@@ -606,16 +642,18 @@ class TestVisualizationPerformance:
         for i in range(50):
             vocab.create_pointer(f"ITEM_{i}")
         
-        benchmark_timer.start("large_vocab_similarity")
-        fig, ax = plot_similarity_matrix(vocab, annotate=False)
-        plt.close(fig)
-        benchmark_timer.end("large_vocab_similarity")
+        with benchmark_timer:
+            fig, ax = plot_similarity_matrix(vocab, annotate=False)
+            plt.close(fig)
+        
+        assert benchmark_timer.last_time < 5.0  # Should complete in under 5 seconds
     
     def test_long_history_animation(self, benchmark_timer):
         """Test animation with long history."""
         states = [np.random.randn(64) for _ in range(100)]
         
-        benchmark_timer.start("long_animation")
-        anim = animate_state_evolution(states, interval=50)
-        plt.close('all')
-        benchmark_timer.end("long_animation")
+        with benchmark_timer:
+            anim = animate_state_evolution(states, interval=50)
+            plt.close('all')
+        
+        assert benchmark_timer.last_time < 10.0  # Should complete in under 10 seconds

@@ -23,7 +23,7 @@ class TestCognitiveControl:
         assert control.name == "CognitiveControl"
         assert control.dimensions == 64
         assert control.config == config
-        assert isinstance(control.vectorocab, Vocabulary)
+        assert isinstance(control.vocab, Vocabulary)
         assert control.current_task is None
         assert len(control.task_stack) == 0
         assert control.error_signal == 0.0
@@ -336,7 +336,7 @@ class TestSequencing:
         
         assert seq.name == "Sequencing"
         assert seq.dimensions == 64
-        assert seq.vectorocab == vocab
+        assert seq.vocab == vocab
         assert seq.current_sequence is None
         assert seq.sequence_index == 0
         assert not seq.paused
